@@ -33,16 +33,16 @@ typedef enum {
 /**
  * @brief Library result codes.
  *
- * @c WSIO_OK is zero. All errors are negative.
+ * @c WSIO_OK is zero. All errors are negative. Programming errors abort
+ * rather than returning a code; there is no invalid-argument error.
  */
 typedef enum {
     WSIO_OK = 0,            /**< Success. */
     WSIO_ERR_NOMEM = -1,    /**< Allocation failed. */
-    WSIO_ERR_PROTOCOL = -2, /**< RFC 6455 protocol violation. */
-    WSIO_ERR_UTF8 = -3,     /**< Invalid UTF-8 in text or close reason. */
+    WSIO_ERR_PROTOCOL = -2, /**< RFC 6455 protocol violation (from the peer). */
+    WSIO_ERR_UTF8 = -3,     /**< Invalid UTF-8 from the peer. */
     WSIO_ERR_TOO_BIG = -4,  /**< Message exceeds @ref wsio_config.max_message_size. */
-    WSIO_ERR_CLOSED = -5,   /**< Connection is closing or already closed. */
-    WSIO_ERR_INVAL = -6     /**< Invalid argument from the caller. */
+    WSIO_ERR_CLOSED = -5    /**< Further input after Close. */
 } wsio_err;
 
 /**
@@ -131,6 +131,7 @@ wsio *wsio_create(wsio_role role);
  * @brief Create a connection from @p cfg.
  *
  * @param cfg Required. @c auto_pong / @c auto_close are used as given (0 = off).
+ *            A NULL @p cfg aborts.
  * @return New connection, or NULL on allocation failure.
  */
 wsio *wsio_create_cfg(const wsio_config *cfg);
@@ -146,12 +147,13 @@ void wsio_destroy(wsio *ws);
  * @brief Push bytes received from the peer.
  *
  * Unparsed tail is copied internally. After a protocol failure a Close frame
- * is queued when possible; still drain output.
+ * is queued when possible; still drain output. A NULL @p ws, or @p len > 0
+ * with a NULL @p src, aborts.
  *
  * @param ws  Connection.
  * @param src Inbound bytes. May be NULL iff @p len is 0.
  * @param len Byte count.
- * @return @ref WSIO_OK, or a negative @ref wsio_err.
+ * @return @ref WSIO_OK, or a negative @ref wsio_err for peer/resource failures.
  */
 int wsio_feed(wsio *ws, const uint8_t *src, size_t len);
 
@@ -163,7 +165,7 @@ size_t wsio_pending(const wsio *ws);
 /**
  * @brief Pointer to the outbound byte queue.
  *
- * @param[out] len Set to the pending length (0 if none).
+ * @param[out] len Required. Set to the pending length (0 if none).
  * @return Pointer into the queue, or NULL if empty.
  */
 const uint8_t *wsio_peek(const wsio *ws, size_t *len);
@@ -190,8 +192,8 @@ wsio_event wsio_poll(wsio *ws);
 /**
  * @brief Queue a frame. Used for explicit fragmentation (@p fin).
  *
- * Text with @p fin set is UTF-8-checked. After a Close is queued, further
- * data frames fail with @ref WSIO_ERR_CLOSED.
+ * Text with @p fin set must be valid UTF-8. Invalid arguments, illegal
+ * opcodes, control frames over 125 bytes, or send after Close abort.
  */
 int wsio_send(wsio *ws, wsio_opcode opcode, const uint8_t *data, size_t len, int fin);
 

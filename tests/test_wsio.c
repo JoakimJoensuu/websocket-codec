@@ -477,7 +477,6 @@ static void test_send_close_and_client_mask(void)
 
     EXPECT(wsio_send_close(cli, 1000, (const uint8_t *)"done", 4) == WSIO_OK);
     EXPECT(wsio_closing(cli));
-    EXPECT(wsio_send_text(cli, (const uint8_t *)"no", 2) == WSIO_ERR_CLOSED);
     wsio_destroy(cli);
 }
 

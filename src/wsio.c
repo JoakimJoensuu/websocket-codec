@@ -13,6 +13,14 @@
 #define WSIO_EVQ 16
 #define WSIO_CTRL_MAX 125
 
+/** @brief Abort on a caller or internal contract violation. */
+static void bug(int ok)
+{
+    if (!ok) {
+        abort();
+    }
+}
+
 /** @brief Incoming-frame parser state. */
 typedef enum {
     ST_HDR = 0, /**< Collecting the frame header. */
@@ -288,12 +296,11 @@ static int encode_frame(wsio *ws, int fin, int opcode, const uint8_t *data, size
     uint8_t key[4];
     size_t total;
 
-    if (ws->close_sent && opcode != WSIO_OP_CLOSE) {
-        return WSIO_ERR_CLOSED;
-    }
-    if (is_control(opcode) && (!fin || len > WSIO_CTRL_MAX)) {
-        return WSIO_ERR_INVAL;
-    }
+    bug(ws != NULL);
+    bug(!ws->close_sent);
+    bug(is_known_opcode(opcode));
+    bug(!is_control(opcode) || (fin && len <= WSIO_CTRL_MAX));
+    bug(!(len && !data));
 
     hdr[0] = (uint8_t)((fin ? 0x80u : 0u) | (opcode & 0x0Fu));
     if (len <= 125) {
@@ -704,6 +711,7 @@ static int parse_in(wsio *ws)
 wsio *wsio_create(wsio_role role)
 {
     wsio_config cfg;
+    bug(role == WSIO_ROLE_CLIENT || role == WSIO_ROLE_SERVER);
     memset(&cfg, 0, sizeof cfg);
     cfg.role = role;
     cfg.auto_pong = 1;
@@ -714,9 +722,8 @@ wsio *wsio_create(wsio_role role)
 wsio *wsio_create_cfg(const wsio_config *cfg)
 {
     wsio *ws;
-    if (!cfg) {
-        return NULL;
-    }
+    bug(cfg != NULL);
+    bug(cfg->role == WSIO_ROLE_CLIENT || cfg->role == WSIO_ROLE_SERVER);
     ws = (wsio *)calloc(1, sizeof *ws);
     if (!ws) {
         return NULL;
@@ -752,9 +759,8 @@ void wsio_destroy(wsio *ws)
 
 int wsio_feed(wsio *ws, const uint8_t *src, size_t len)
 {
-    if (!ws || (len && !src)) {
-        return WSIO_ERR_INVAL;
-    }
+    bug(ws != NULL);
+    bug(!(len && !src));
     drop_held(ws);
     if (ws->st == ST_DEAD) {
         return ws->last_err ? (int)ws->last_err : WSIO_ERR_CLOSED;
@@ -771,7 +777,8 @@ int wsio_feed(wsio *ws, const uint8_t *src, size_t len)
 
 size_t wsio_pending(const wsio *ws)
 {
-    if (!ws || ws->out_len <= ws->out_off) {
+    bug(ws != NULL);
+    if (ws->out_len <= ws->out_off) {
         return 0;
     }
     return ws->out_len - ws->out_off;
@@ -779,11 +786,12 @@ size_t wsio_pending(const wsio *ws)
 
 const uint8_t *wsio_peek(const wsio *ws, size_t *len)
 {
-    size_t n = wsio_pending(ws);
-    if (len) {
-        *len = n;
-    }
-    if (!ws || n == 0) {
+    size_t n;
+    bug(ws != NULL);
+    bug(len != NULL);
+    n = wsio_pending(ws);
+    *len = n;
+    if (n == 0) {
         return NULL;
     }
     return ws->out + ws->out_off;
@@ -792,13 +800,9 @@ const uint8_t *wsio_peek(const wsio *ws, size_t *len)
 void wsio_consume(wsio *ws, size_t n)
 {
     size_t pend;
-    if (!ws) {
-        return;
-    }
+    bug(ws != NULL);
     pend = wsio_pending(ws);
-    if (n > pend) {
-        n = pend;
-    }
+    bug(n <= pend);
     ws->out_off += n;
     if (ws->out_off >= ws->out_len) {
         ws->out_off = 0;
@@ -809,8 +813,11 @@ void wsio_consume(wsio *ws, size_t n)
 size_t wsio_write(wsio *ws, uint8_t *dst, size_t cap)
 {
     size_t n;
-    const uint8_t *p = wsio_peek(ws, &n);
-    if (!p || !dst) {
+    const uint8_t *p;
+    bug(ws != NULL);
+    bug(cap == 0 || dst != NULL);
+    p = wsio_peek(ws, &n);
+    if (!p) {
         return 0;
     }
     if (n > cap) {
@@ -853,11 +860,9 @@ static wsio_event pop_message(wsio *ws)
 wsio_event wsio_poll(wsio *ws)
 {
     wsio_event ev;
+    bug(ws != NULL);
     memset(&ev, 0, sizeof ev);
     ev.kind = WSIO_EV_NONE;
-    if (!ws) {
-        return ev;
-    }
     drop_held(ws);
 
     if (ws->ev_n > 0) {
@@ -879,21 +884,16 @@ wsio_event wsio_poll(wsio *ws)
 
 int wsio_send(wsio *ws, wsio_opcode opcode, const uint8_t *data, size_t len, int fin)
 {
-    if (!ws) {
-        return WSIO_ERR_INVAL;
-    }
-    if (len && !data) {
-        return WSIO_ERR_INVAL;
-    }
-    if (ws->close_sent) {
-        return WSIO_ERR_CLOSED;
-    }
+    bug(ws != NULL);
+    bug(!(len && !data));
+    bug(!ws->close_sent);
     if (opcode == WSIO_OP_TEXT && fin) {
         wsio_utf8 u;
         wsio_utf8_init(&u);
-        if ((len && wsio_utf8_feed(&u, data, len) != 0) || wsio_utf8_finish(&u) != 0) {
-            return WSIO_ERR_UTF8;
+        if (len) {
+            bug(wsio_utf8_feed(&u, data, len) == 0);
         }
+        bug(wsio_utf8_finish(&u) == 0);
     }
     drop_held(ws);
     return encode_frame(ws, fin ? 1 : 0, (int)opcode, data, len);
@@ -923,33 +923,21 @@ int wsio_send_close(wsio *ws, uint16_t code, const uint8_t *reason, size_t reaso
 {
     uint8_t payload[125];
     size_t plen;
-    if (!ws) {
-        return WSIO_ERR_INVAL;
-    }
-    if (ws->close_sent) {
-        return WSIO_ERR_CLOSED;
-    }
+    bug(ws != NULL);
+    bug(!ws->close_sent);
     drop_held(ws);
     if (code == 0) {
-        if (reason_len) {
-            return WSIO_ERR_INVAL;
-        }
+        bug(reason_len == 0);
         return encode_frame(ws, 1, WSIO_OP_CLOSE, NULL, 0);
     }
-    if (!wsio_close_code_valid(code)) {
-        return WSIO_ERR_INVAL;
-    }
-    if (reason_len > 123) {
-        return WSIO_ERR_INVAL;
-    }
+    bug(wsio_close_code_valid(code));
+    bug(reason_len <= 123);
     wr16(payload, code);
     plen = 2;
     if (reason_len) {
         wsio_utf8 u;
         wsio_utf8_init(&u);
-        if (wsio_utf8_feed(&u, reason, reason_len) != 0 || wsio_utf8_finish(&u) != 0) {
-            return WSIO_ERR_UTF8;
-        }
+        bug(wsio_utf8_feed(&u, reason, reason_len) == 0 && wsio_utf8_finish(&u) == 0);
         memcpy(payload + 2, reason, reason_len);
         plen = 2 + reason_len;
     }
@@ -958,20 +946,24 @@ int wsio_send_close(wsio *ws, uint16_t code, const uint8_t *reason, size_t reaso
 
 int wsio_closing(const wsio *ws)
 {
-    return ws && (ws->close_sent || ws->close_recv);
+    bug(ws != NULL);
+    return ws->close_sent || ws->close_recv;
 }
 
 int wsio_closed(const wsio *ws)
 {
-    return ws && ws->close_sent && ws->close_recv;
+    bug(ws != NULL);
+    return ws->close_sent && ws->close_recv;
 }
 
 wsio_err wsio_error(const wsio *ws)
 {
-    return ws ? ws->last_err : WSIO_ERR_INVAL;
+    bug(ws != NULL);
+    return ws->last_err;
 }
 
 uint16_t wsio_last_close(const wsio *ws)
 {
-    return ws ? ws->close_code : WSIO_CLOSE_ABNORMAL;
+    bug(ws != NULL);
+    return ws->close_code;
 }
