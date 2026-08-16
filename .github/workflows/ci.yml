@@ -4,6 +4,10 @@ on:
   push:
   # Not pull_request: a PR-head push would then run twice.
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   unit:
     runs-on: ubuntu-latest
