@@ -2,7 +2,7 @@ name: ci
 
 on:
   push:
-  pull_request:
+  # Not pull_request: a PR-head push would then run twice.
 
 jobs:
   unit:
