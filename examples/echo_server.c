@@ -141,8 +141,7 @@ static void sha1_final(sha1 *s, uint8_t out[20])
 
 static void b64_20(const uint8_t in[20], char out[29])
 {
-    static const char T[] =
-        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    static const char T[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
     int i, j = 0;
     for (i = 0; i < 18; i += 3) {
         uint32_t v = ((uint32_t)in[i] << 16) | ((uint32_t)in[i + 1] << 8) | in[i + 2];

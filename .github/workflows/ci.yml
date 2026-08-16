@@ -8,6 +8,22 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  style:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Install clang-format and clang-tidy
+        run: sudo apt-get update && sudo apt-get install -y clang-format clang-tidy
+      - name: clang-format and clang-tidy
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: ./scripts/check-style.sh --ci
+
   unit:
     runs-on: ubuntu-latest
     steps:
