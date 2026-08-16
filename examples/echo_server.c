@@ -1,4 +1,9 @@
-/* Autobahn testee: POSIX TCP + HTTP upgrade, then wsio. Usage: echo_server [port] */
+/**
+ * @file echo_server.c
+ * @brief Autobahn testee: POSIX TCP + HTTP upgrade, then wsio.
+ *
+ * Usage: `echo_server [port]`
+ */
 
 #define _POSIX_C_SOURCE 200809L
 
@@ -18,20 +23,21 @@
 
 #define GUID "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
 
-/* --- SHA-1 (FIPS 180-1), used only for Sec-WebSocket-Accept --------------- */
-
+/** @brief SHA-1 (FIPS 180-1), used only for Sec-WebSocket-Accept. */
 typedef struct {
-    uint32_t h[5];
-    uint64_t nbits;
-    uint8_t block[64];
-    size_t nblock;
+    uint32_t h[5];   /**< Hash state. */
+    uint64_t nbits;  /**< Total bits processed. */
+    uint8_t block[64]; /**< Partial block. */
+    size_t nblock;   /**< Bytes in @p block. */
 } sha1;
 
+/** @brief Rotate left. */
 static uint32_t rol(uint32_t x, int n)
 {
     return (x << n) | (x >> (32 - n));
 }
 
+/** @brief Initialize SHA-1. */
 static void sha1_init(sha1 *s)
 {
     s->h[0] = 0x67452301u;
@@ -43,6 +49,7 @@ static void sha1_init(sha1 *s)
     s->nblock = 0;
 }
 
+/** @brief Compress one 64-byte block. */
 static void sha1_block(sha1 *s, const uint8_t b[64])
 {
     uint32_t w[80];
@@ -90,6 +97,7 @@ static void sha1_block(sha1 *s, const uint8_t b[64])
     s->h[4] += e;
 }
 
+/** @brief Absorb @p len bytes. */
 static void sha1_update(sha1 *s, const void *data, size_t len)
 {
     const uint8_t *p = (const uint8_t *)data;
@@ -110,6 +118,7 @@ static void sha1_update(sha1 *s, const void *data, size_t len)
     }
 }
 
+/** @brief Write the 20-byte digest to @p out. */
 static void sha1_final(sha1 *s, uint8_t out[20])
 {
     size_t i;
@@ -136,6 +145,7 @@ static void sha1_final(sha1 *s, uint8_t out[20])
     }
 }
 
+/** @brief Base64-encode 20 bytes into 28 chars plus NUL. */
 static void b64_20(const uint8_t in[20], char out[29])
 {
     static const char T[] =
@@ -158,6 +168,7 @@ static void b64_20(const uint8_t in[20], char out[29])
     out[j] = 0;
 }
 
+/** @brief Copy Sec-WebSocket-Key into @p key. */
 static int header_key(const char *hdrs, char key[32])
 {
     const char *p = hdrs;
@@ -193,6 +204,7 @@ static int header_key(const char *hdrs, char key[32])
     }
 }
 
+/** @brief HTTP/1.1 upgrade; leftover bytes after the headers go in @p leftover. */
 static int handshake(int fd, uint8_t *leftover, size_t *nleft, size_t cap)
 {
     char buf[8192];
@@ -244,6 +256,7 @@ static int handshake(int fd, uint8_t *leftover, size_t *nleft, size_t cap)
     return -1;
 }
 
+/** @brief Write all pending wsio bytes to @p fd. */
 static int flush_ws(int fd, wsio *ws)
 {
     for (;;) {
@@ -267,6 +280,7 @@ static int flush_ws(int fd, wsio *ws)
     }
 }
 
+/** @brief One accepted TCP connection: handshake, then echo via wsio. */
 static void session(int fd)
 {
     wsio_config cfg;
@@ -337,6 +351,7 @@ static void session(int fd)
     wsio_destroy(ws);
 }
 
+/** @brief Listen on argv[1] or port 9001. */
 int main(int argc, char **argv)
 {
     int port = 9001;

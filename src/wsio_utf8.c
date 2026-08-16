@@ -1,4 +1,7 @@
-/* Streaming UTF-8 for RFC 6455 text. Code points may split across fragments. */
+/**
+ * @file wsio_utf8.c
+ * @brief Streaming UTF-8 checks for text frames and close reasons.
+ */
 
 #include "wsio_utf8.h"
 
@@ -8,6 +11,7 @@ void wsio_utf8_init(wsio_utf8 *u)
     u->need = 0;
 }
 
+/** @brief Consume one byte; overlong/surrogate/out-of-range sequences fail. */
 static int feed_byte(wsio_utf8 *u, uint8_t b)
 {
     if (u->need == 0) {
