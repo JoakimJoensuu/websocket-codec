@@ -1,8 +1,3 @@
-/**
- * @file wsio.c
- * @brief RFC 6455 framer implementation. Public API is documented in wsio.h.
- */
-
 #include "wsio.h"
 #include "wsio_utf8.h"
 
@@ -13,7 +8,6 @@
 #define WSIO_EVQ 16
 #define WSIO_CTRL_MAX 125
 
-/** @brief Abort on a caller or internal contract violation. */
 static void bug(int ok)
 {
     if (!ok) {
@@ -21,77 +15,73 @@ static void bug(int ok)
     }
 }
 
-/** @brief Incoming-frame parser state. */
 typedef enum {
-    ST_HDR = 0, /**< Collecting the frame header. */
-    ST_PAYLOAD, /**< Collecting payload bytes. */
-    ST_DEAD     /**< Close or error; further input is ignored. */
+    ST_HDR = 0,
+    ST_PAYLOAD,
+    ST_DEAD
 } parse_st;
 
-/** @brief Queued control/error event (payload is owned). */
 typedef struct {
-    wsio_event_kind kind; /**< Event type. */
-    uint16_t close_code;  /**< Close/error code, if any. */
-    size_t len;           /**< Length of @p data. */
-    uint8_t *data;        /**< Heap copy of the payload, or NULL. */
+    wsio_event_kind kind;
+    uint16_t close_code;
+    size_t len;
+    uint8_t *data;
 } ev_item;
 
-/** @brief Opaque connection; see @ref wsio. */
 struct wsio {
-    wsio_role role;          /**< Client or server. */
-    size_t max_message_size; /**< Assembled-message cap. */
-    int auto_pong;           /**< Non-zero: queue pong on ping. */
-    int auto_close;          /**< Non-zero: echo Close. */
-    uint32_t (*rng)(void *); /**< Optional mask CSPRNG. */
-    void *rng_ctx;           /**< User pointer for @p rng. */
-    uint32_t rng_state;      /**< Internal PRNG state. */
+    wsio_role role;
+    size_t max_message_size;
+    int auto_pong;
+    int auto_close;
+    uint32_t (*rng)(void *);
+    void *rng_ctx;
+    uint32_t rng_state;
 
-    parse_st st;     /**< Byte parser. */
-    uint8_t hdr[14]; /**< Partial header. */
-    size_t hdr_got;  /**< Bytes in @p hdr. */
-    size_t hdr_need; /**< Header bytes still required. */
+    parse_st st;
+    uint8_t hdr[14];
+    size_t hdr_got;
+    size_t hdr_need;
 
-    int fin;              /**< FIN of the current frame. */
-    int opcode;           /**< Opcode of the current frame. */
-    int masked;           /**< MASK bit of the current frame. */
-    uint64_t payload_len; /**< Declared payload length. */
-    uint8_t mask_key[4];  /**< Masking key, if present. */
-    uint64_t payload_got; /**< Payload bytes consumed so far. */
-    unsigned mask_off;    /**< Mask index (mod 4). */
+    int fin;
+    int opcode;
+    int masked;
+    uint64_t payload_len;
+    uint8_t mask_key[4];
+    uint64_t payload_got;
+    unsigned mask_off;
 
-    int msg_opcode;  /**< 0, or TEXT/BIN while fragmenting. */
-    int msg_kind;    /**< Opcode of a completed pending message. */
-    uint8_t *msg;    /**< Assembled data message. */
-    size_t msg_len;  /**< Bytes in @p msg. */
-    size_t msg_cap;  /**< Allocated size of @p msg. */
-    int msg_pending; /**< Non-zero: @p msg is ready for poll. */
-    wsio_utf8 utf8;  /**< Text UTF-8 state. */
+    int msg_opcode;
+    int msg_kind;
+    uint8_t *msg;
+    size_t msg_len;
+    size_t msg_cap;
+    int msg_pending;
+    wsio_utf8 utf8;
 
-    uint8_t ctrl[WSIO_CTRL_MAX]; /**< Current control payload. */
-    size_t ctrl_len;             /**< Bytes in @p ctrl. */
+    uint8_t ctrl[WSIO_CTRL_MAX];
+    size_t ctrl_len;
 
-    uint8_t *in;   /**< Unparsed inbound tail. */
-    size_t in_len; /**< Bytes in @p in. */
-    size_t in_cap; /**< Allocated size of @p in. */
+    uint8_t *in;
+    size_t in_len;
+    size_t in_cap;
 
-    uint8_t *out;    /**< Outbound byte queue. */
-    size_t out_len;  /**< End offset of valid outbound data. */
-    size_t out_off;  /**< Start offset not yet consumed. */
-    size_t out_cap;  /**< Allocated size of @p out. */
+    uint8_t *out;
+    size_t out_len;
+    size_t out_off;
+    size_t out_cap;
 
-    ev_item evq[WSIO_EVQ]; /**< Control/error event ring. */
-    int ev_r;              /**< Ring read index. */
-    int ev_w;              /**< Ring write index. */
-    int ev_n;              /**< Ring occupancy. */
-    uint8_t *held;         /**< Last polled control payload, freed next mutate. */
+    ev_item evq[WSIO_EVQ];
+    int ev_r;
+    int ev_w;
+    int ev_n;
+    uint8_t *held; /**< Last polled control payload; freed on the next mutate. */
 
-    int close_sent;      /**< Non-zero: Close queued outbound. */
-    int close_recv;      /**< Non-zero: Close received. */
-    uint16_t close_code; /**< Last close code. */
-    wsio_err last_err;   /**< First protocol/library error. */
+    int close_sent;
+    int close_recv;
+    uint16_t close_code;
+    wsio_err last_err;
 };
 
-/** @brief Default xorshift PRNG used when @ref wsio_config.rng is NULL. */
 static uint32_t default_rng(void *ctx)
 {
     uint32_t *s = (uint32_t *)ctx;
@@ -118,26 +108,22 @@ int wsio_close_code_valid(uint16_t code)
     return 0;
 }
 
-/** @brief Non-zero if @p op is a control opcode (high bit of the nibble). */
 static int is_control(int op)
 {
     return (op & 0x8) != 0;
 }
 
-/** @brief Non-zero if @p op is one of the six RFC 6455 opcodes. */
 static int is_known_opcode(int op)
 {
     return op == WSIO_OP_CONT || op == WSIO_OP_TEXT || op == WSIO_OP_BIN ||
            op == WSIO_OP_CLOSE || op == WSIO_OP_PING || op == WSIO_OP_PONG;
 }
 
-/** @brief Read a 16-bit big-endian integer. */
 static uint16_t rd16(const uint8_t *p)
 {
     return (uint16_t)(((uint16_t)p[0] << 8) | p[1]);
 }
 
-/** @brief Read a 64-bit big-endian integer. */
 static uint64_t rd64(const uint8_t *p)
 {
     uint64_t v = 0;
@@ -148,14 +134,12 @@ static uint64_t rd64(const uint8_t *p)
     return v;
 }
 
-/** @brief Write a 16-bit big-endian integer. */
 static void wr16(uint8_t *p, uint16_t v)
 {
     p[0] = (uint8_t)(v >> 8);
     p[1] = (uint8_t)v;
 }
 
-/** @brief Write a 64-bit big-endian integer. */
 static void wr64(uint8_t *p, uint64_t v)
 {
     int i;
@@ -165,7 +149,6 @@ static void wr64(uint8_t *p, uint64_t v)
     }
 }
 
-/** @brief Grow *@p p so it can hold @p need bytes. */
 static int buf_reserve(uint8_t **p, size_t *cap, size_t need)
 {
     uint8_t *nbuf;
@@ -190,7 +173,6 @@ static int buf_reserve(uint8_t **p, size_t *cap, size_t need)
     return 0;
 }
 
-/** @brief Drop @p n bytes from the inbound tail. */
 static void in_consume(wsio *ws, size_t n)
 {
     if (n >= ws->in_len) {
@@ -201,7 +183,6 @@ static void in_consume(wsio *ws, size_t n)
     ws->in_len -= n;
 }
 
-/** @brief Slide consumed outbound bytes off the front of the queue. */
 static void out_compact(wsio *ws)
 {
     if (ws->out_off == 0) {
@@ -217,7 +198,6 @@ static void out_compact(wsio *ws)
     ws->out_off = 0;
 }
 
-/** @brief Ensure the outbound queue can append @p extra bytes. */
 static int out_reserve(wsio *ws, size_t extra)
 {
     size_t used = ws->out_len - ws->out_off;
@@ -227,14 +207,12 @@ static int out_reserve(wsio *ws, size_t extra)
     return buf_reserve(&ws->out, &ws->out_cap, ws->out_len + extra);
 }
 
-/** @brief Free the payload of the last polled control event. */
 static void drop_held(wsio *ws)
 {
     free(ws->held);
     ws->held = NULL;
 }
 
-/** @brief Append a control/error event, copying @p data. */
 static int ev_push(wsio *ws, wsio_event_kind kind, const uint8_t *data, size_t len,
                    uint16_t close_code)
 {
@@ -259,7 +237,6 @@ static int ev_push(wsio *ws, wsio_event_kind kind, const uint8_t *data, size_t l
     return 0;
 }
 
-/** @brief Next 32-bit value from the configured or default PRNG. */
 static uint32_t next_rng(wsio *ws)
 {
     if (ws->rng) {
@@ -268,7 +245,6 @@ static uint32_t next_rng(wsio *ws)
     return default_rng(&ws->rng_state);
 }
 
-/** @brief Fill a 4-byte masking key. */
 static void fill_mask(wsio *ws, uint8_t key[4])
 {
     uint32_t r = next_rng(ws);
@@ -278,7 +254,6 @@ static void fill_mask(wsio *ws, uint8_t key[4])
     key[3] = (uint8_t)(r >> 24);
 }
 
-/** @brief XOR @p n bytes with a repeating 4-byte mask. */
 static void apply_mask(uint8_t *p, size_t n, const uint8_t key[4])
 {
     size_t i;
@@ -287,7 +262,6 @@ static void apply_mask(uint8_t *p, size_t n, const uint8_t key[4])
     }
 }
 
-/** @brief Append one encoded frame to the outbound queue. */
 static int encode_frame(wsio *ws, int fin, int opcode, const uint8_t *data, size_t len)
 {
     uint8_t hdr[14];
@@ -339,7 +313,6 @@ static int encode_frame(wsio *ws, int fin, int opcode, const uint8_t *data, size
     return WSIO_OK;
 }
 
-/** @brief Record @p err, queue Close @p code, and emit @ref WSIO_EV_ERROR. */
 static int fail(wsio *ws, wsio_err err, uint16_t code, const char *reason)
 {
     uint8_t payload[125];
@@ -369,7 +342,6 @@ static int fail(wsio *ws, wsio_err err, uint16_t code, const char *reason)
     return err;
 }
 
-/** @brief Full header size from the second header byte. */
 static int header_len(uint8_t b1)
 {
     int n = 2;
@@ -385,7 +357,6 @@ static int header_len(uint8_t b1)
     return n;
 }
 
-/** @brief Finish UTF-8 (if text) and mark the assembled message as pollable. */
 static int finish_message(wsio *ws)
 {
     if (ws->msg_opcode == WSIO_OP_TEXT) {
@@ -398,7 +369,6 @@ static int finish_message(wsio *ws)
     return WSIO_OK;
 }
 
-/** @brief Handle ping, pong, or close after the control payload is complete. */
 static int on_control(wsio *ws)
 {
     if (ws->opcode == WSIO_OP_PING) {
@@ -459,7 +429,6 @@ static int on_control(wsio *ws)
     }
 }
 
-/** @brief Apply a completed zero-length frame (start message and/or FIN). */
 static int dispatch_empty_or_start(wsio *ws)
 {
     if (is_control(ws->opcode)) {
@@ -480,7 +449,6 @@ static int dispatch_empty_or_start(wsio *ws)
 }
 
 /* Returns 1 if the caller should leave the header bytes unconsumed. */
-/** @brief Validate a complete header and enter payload or empty-frame handling. */
 static int on_frame_header(wsio *ws)
 {
     uint8_t b0 = ws->hdr[0];
@@ -578,7 +546,6 @@ static int on_frame_header(wsio *ws)
     return WSIO_OK;
 }
 
-/** @brief Unmask and copy @p n payload bytes into the message or control buffer. */
 static int on_payload_bytes(wsio *ws, const uint8_t *src, size_t n)
 {
     uint8_t tmp[512];
@@ -618,7 +585,6 @@ static int on_payload_bytes(wsio *ws, const uint8_t *src, size_t n)
     return WSIO_OK;
 }
 
-/** @brief Called when payload_got reaches payload_len. */
 static int on_payload_done(wsio *ws)
 {
     ws->st = ST_HDR;
@@ -635,7 +601,6 @@ static int on_payload_done(wsio *ws)
     return WSIO_OK;
 }
 
-/** @brief Parse as many complete frames as possible from @p ws->in. */
 static int parse_in(wsio *ws)
 {
     while (ws->in_len > 0 && ws->st != ST_DEAD && ws->last_err == WSIO_OK) {
@@ -828,7 +793,6 @@ size_t wsio_write(wsio *ws, uint8_t *dst, size_t cap)
     return n;
 }
 
-/** @brief Pop the next queued control/error event. */
 static wsio_event pop_control(wsio *ws)
 {
     wsio_event ev;
@@ -845,7 +809,6 @@ static wsio_event pop_control(wsio *ws)
     return ev;
 }
 
-/** @brief Return the assembled data message without copying. */
 static wsio_event pop_message(wsio *ws)
 {
     wsio_event ev;
