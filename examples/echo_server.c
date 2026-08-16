@@ -1,12 +1,4 @@
-/*
- * Copyright 2026 Joakim Joensuu
- * SPDX-License-Identifier: Apache-2.0
- *
- * Autobahn testee: POSIX TCP + HTTP/1.1 upgrade (not part of libwsio)
- * wrapping the sans-I/O RFC 6455 framer as an echo server.
- *
- *   ./echo_server [port]
- */
+/* Autobahn testee: POSIX TCP + HTTP upgrade, then wsio. Usage: echo_server [port] */
 
 #define _POSIX_C_SOURCE 200809L
 

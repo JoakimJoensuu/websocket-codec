@@ -1,15 +1,3 @@
-/*
- * Copyright 2026 Joakim Joensuu
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Sans-I/O WebSocket framing (RFC 6455 §§5–7). No sockets, no HTTP.
- */
-
 #include "wsio.h"
 #include "wsio_utf8.h"
 

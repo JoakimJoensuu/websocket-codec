@@ -1,16 +1,4 @@
-/*
- * Copyright 2026 Joakim Joensuu
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Streaming UTF-8 validator for RFC 6455 text payloads. Fragment boundaries
- * may split a code point; only a rejected sequence or an unfinished sequence
- * at the end of a message is an error (RFC 6455 §5.6, §8.1).
- */
+/* Streaming UTF-8 for RFC 6455 text. Code points may split across fragments. */
 
 #include "wsio_utf8.h"
 

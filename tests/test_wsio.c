@@ -1,10 +1,3 @@
-/*
- * Copyright 2026 Joakim Joensuu
- * SPDX-License-Identifier: Apache-2.0
- *
- * Unit tests for wsio (RFC 6455 framing).
- */
-
 #include "wsio.h"
 
 #include <stdio.h>

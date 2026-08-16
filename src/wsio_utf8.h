@@ -1,7 +1,3 @@
-/*
- * Copyright 2026 Joakim Joensuu
- * SPDX-License-Identifier: Apache-2.0
- */
 #ifndef WSIO_UTF8_H
 #define WSIO_UTF8_H
 
