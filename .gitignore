@@ -1,0 +1,21 @@
+# Prerequisites
+*.o
+*.a
+*.so
+*.dylib
+*.exe
+test_wsio
+echo_server
+build/
+cmake-build-*/
+.cache/
+
+# Autobahn output
+autobahn/reports/
+
+# Editor / OS
+.idea/
+.vscode/
+*.swp
+*~
+.DS_Store
