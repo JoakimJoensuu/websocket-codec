@@ -7,16 +7,12 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 PORT="${PORT:-9001}"
 IMAGE="${AUTOBAHN_IMAGE:-crossbario/autobahn-testsuite}"
 
-if [[ ! -x "$ROOT/echo_server" && ! -x "$ROOT/build/echo_server" ]]; then
-  echo "build echo_server first (cmake -B build && cmake --build build, or make)" >&2
+if [[ ! -x "$ROOT/build/echo_server" ]]; then
+  echo "build echo_server first: cmake -B build && cmake --build build --target echo_server" >&2
   exit 1
 fi
 
-if [[ -x "$ROOT/build/echo_server" ]]; then
-  SERVER="$ROOT/build/echo_server"
-else
-  SERVER="$ROOT/echo_server"
-fi
+SERVER="$ROOT/build/echo_server"
 
 mkdir -p "$ROOT/autobahn/reports/servers"
 

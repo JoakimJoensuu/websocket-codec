@@ -18,8 +18,6 @@ drain bytes back to it.
 
 ```sh
 cmake -B build && cmake --build build && ctest --test-dir build
-# or
-make test
 ```
 
 ## API sketch
