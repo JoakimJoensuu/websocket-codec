@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Run Autobahn fuzzingclient against the wsio echo server.
+# Run Autobahn fuzzingclient against the sws echo server.
 # HTTP upgrade lives only in examples/echo_server.c; this script is I/O glue.
 set -euo pipefail
 

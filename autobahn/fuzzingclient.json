@@ -2,7 +2,7 @@
   "outdir": "./reports/servers",
   "servers": [
     {
-      "agent": "wsio",
+      "agent": "sws",
       "url": "ws://127.0.0.1:9001"
     }
   ],

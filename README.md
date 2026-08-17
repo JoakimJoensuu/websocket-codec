@@ -1,4 +1,4 @@
-# wsio
+# sws
 
 Sans-I/O C library for the **WebSocket data protocol** in
 [RFC 6455](https://datatracker.ietf.org/doc/html/rfc6455) (sections 5–7):
@@ -10,7 +10,7 @@ You own those. After `101 Switching Protocols`, feed bytes from the socket and
 drain bytes back to it.
 
 ```
-  application  <-->  wsio (frames / events)  <-->  your I/O
+  application  <-->  sws (frames / events)  <-->  your I/O
                           no sockets
 ```
 
@@ -23,34 +23,34 @@ cmake -B build && cmake --build build && ctest --test-dir build
 ## API sketch
 
 ```c
-#include "wsio.h"
+#include "sws.h"
 
-wsio *ws = wsio_create(WSIO_ROLE_SERVER); /* or WSIO_ROLE_CLIENT */
+sws *ws = sws_create(SWS_ROLE_SERVER); /* or SWS_ROLE_CLIENT */
 
 /* inbound TCP bytes */
-wsio_result in = wsio_feed(ws, buf, n);
+sws_result in = sws_feed(ws, buf, n);
 size_t i;
 for (i = 0; i < in.n; i++) {
-    if (in.evs[i].kind == WSIO_EV_TEXT) {
-        wsio_send_text(ws, in.evs[i].data, in.evs[i].len);
+    if (in.evs[i].kind == SWS_EV_TEXT) {
+        sws_send_text(ws, in.evs[i].data, in.evs[i].len);
     }
-    if (in.evs[i].kind == WSIO_EV_BIN) {
-        wsio_send_bin(ws, in.evs[i].data, in.evs[i].len);
+    if (in.evs[i].kind == SWS_EV_BIN) {
+        sws_send_bin(ws, in.evs[i].data, in.evs[i].len);
     }
     /* ping is auto-answered; close is auto-answered unless you disable it */
 }
 
 /* outbound TCP bytes */
 size_t n;
-const uint8_t *p = wsio_peek(ws, &n);
+const uint8_t *p = sws_peek(ws, &n);
 send(fd, p, n, 0);
-wsio_consume(ws, n);
+sws_consume(ws, n);
 
-wsio_destroy(ws);
+sws_destroy(ws);
 ```
 
 Clients mask every outgoing frame (RFC 6455 §5.3). The default PRNG is
-**not** a CSPRNG; set `wsio_config.rng` if you need unpredictable masks.
+**not** a CSPRNG; set `sws_config.rng` if you need unpredictable masks.
 Servers never mask.
 
 ## What is in vs out of scope
@@ -68,7 +68,7 @@ Autobahn cases 12.* and 13.* (compression) are excluded for that reason.
 ## Autobahn Testsuite
 
 `examples/echo_server.c` is a POSIX echo **testee**: it performs the HTTP
-upgrade, then speaks only through `wsio`. That is the intended split.
+upgrade, then speaks only through `sws`. That is the intended split.
 
 ```sh
 cmake -B build && cmake --build build --target echo_server
@@ -86,10 +86,10 @@ Config: `autobahn/fuzzingclient.json` (host) and
 ## Layout
 
 ```
-include/wsio.h           public API
-src/wsio.c               framer
-src/wsio_utf8.c          streaming UTF-8
-tests/test_wsio.c        unit tests
+include/sws.h           public API
+src/sws.c               framer
+src/sws_utf8.c          streaming UTF-8
+tests/test_sws.c        unit tests
 examples/echo_server.c   Autobahn testee (HTTP + sockets)
 autobahn/                fuzzingclient specs
 scripts/run-autobahn.sh

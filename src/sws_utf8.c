@@ -1,12 +1,12 @@
-#include "wsio_utf8.h"
+#include "sws_utf8.h"
 
-void wsio_utf8_init(wsio_utf8 *u)
+void sws_utf8_init(sws_utf8 *u)
 {
     u->codep = 0;
     u->need = 0;
 }
 
-static int feed_byte(wsio_utf8 *u, uint8_t b)
+static int feed_byte(sws_utf8 *u, uint8_t b)
 {
     if (u->need == 0) {
         if (b <= 0x7Fu) {
@@ -62,7 +62,7 @@ static int feed_byte(wsio_utf8 *u, uint8_t b)
     return 0;
 }
 
-int wsio_utf8_feed(wsio_utf8 *u, const uint8_t *p, size_t n)
+int sws_utf8_feed(sws_utf8 *u, const uint8_t *p, size_t n)
 {
     size_t i;
     for (i = 0; i < n; i++) {
@@ -73,7 +73,7 @@ int wsio_utf8_feed(wsio_utf8 *u, const uint8_t *p, size_t n)
     return 0;
 }
 
-int wsio_utf8_finish(const wsio_utf8 *u)
+int sws_utf8_finish(const sws_utf8 *u)
 {
     return u->need == 0 ? 0 : -1;
 }

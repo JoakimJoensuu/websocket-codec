@@ -4,7 +4,7 @@
 *.so
 *.dylib
 *.exe
-test_wsio
+test_sws
 echo_server
 build/
 cmake-build-*/

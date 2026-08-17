@@ -1,12 +1,12 @@
 /**
- * Autobahn testee: POSIX TCP + HTTP upgrade, then wsio.
+ * Autobahn testee: POSIX TCP + HTTP upgrade, then sws.
  *
  * Usage: `echo_server [port]`
  */
 
 #define _POSIX_C_SOURCE 200809L
 
-#include "wsio.h"
+#include "sws.h"
 
 #include <arpa/inet.h>
 #include <errno.h>
@@ -248,11 +248,11 @@ static int handshake(int fd, uint8_t *leftover, size_t *nleft, size_t cap)
     return -1;
 }
 
-static int flush_ws(int fd, wsio *ws)
+static int flush_ws(int fd, sws *ws)
 {
     for (;;) {
         size_t n;
-        const uint8_t *p = wsio_peek(ws, &n);
+        const uint8_t *p = sws_peek(ws, &n);
         ssize_t w;
         if (!n) {
             return 0;
@@ -267,24 +267,24 @@ static int flush_ws(int fd, wsio *ws)
         if (w == 0) {
             return -1;
         }
-        wsio_consume(ws, (size_t)w);
+        sws_consume(ws, (size_t)w);
     }
 }
 
-static bool handle_events(wsio *ws, wsio_result in)
+static bool handle_events(sws *ws, sws_result in)
 {
     size_t i;
     bool stop = false;
     for (i = 0; i < in.n; i++) {
-        if (in.evs[i].kind == WSIO_EV_TEXT) {
-            if (wsio_send_text(ws, in.evs[i].data, in.evs[i].len) != WSIO_OK) {
+        if (in.evs[i].kind == SWS_EV_TEXT) {
+            if (sws_send_text(ws, in.evs[i].data, in.evs[i].len) != SWS_OK) {
                 stop = true;
             }
-        } else if (in.evs[i].kind == WSIO_EV_BIN) {
-            if (wsio_send_bin(ws, in.evs[i].data, in.evs[i].len) != WSIO_OK) {
+        } else if (in.evs[i].kind == SWS_EV_BIN) {
+            if (sws_send_bin(ws, in.evs[i].data, in.evs[i].len) != SWS_OK) {
                 stop = true;
             }
-        } else if (in.evs[i].kind == WSIO_EV_CLOSE || in.evs[i].kind == WSIO_EV_ERROR) {
+        } else if (in.evs[i].kind == SWS_EV_CLOSE || in.evs[i].kind == SWS_EV_ERROR) {
             stop = true;
         }
     }
@@ -293,8 +293,8 @@ static bool handle_events(wsio *ws, wsio_result in)
 
 static void session(int fd)
 {
-    wsio_config cfg;
-    wsio *ws;
+    sws_config cfg;
+    sws *ws;
     uint8_t leftover[8192];
     size_t nleft = 0;
     uint8_t buf[64 * 1024];
@@ -307,20 +307,20 @@ static void session(int fd)
     }
 
     memset(&cfg, 0, sizeof cfg);
-    cfg.role = WSIO_ROLE_SERVER;
+    cfg.role = SWS_ROLE_SERVER;
     cfg.max_message_size = 32u * 1024u * 1024u;
     cfg.auto_pong = true;
     cfg.auto_close = true;
-    ws = wsio_create_cfg(&cfg);
+    ws = sws_create_cfg(&cfg);
     if (!ws) {
         return;
     }
 
     if (nleft) {
-        wsio_result in = wsio_feed(ws, leftover, nleft);
-        if (in.err != WSIO_OK) {
+        sws_result in = sws_feed(ws, leftover, nleft);
+        if (in.err != SWS_OK) {
             flush_ws(fd, ws);
-            wsio_destroy(ws);
+            sws_destroy(ws);
             return;
         }
         stop = handle_events(ws, in);
@@ -330,24 +330,24 @@ static void session(int fd)
         if (flush_ws(fd, ws) != 0) {
             break;
         }
-        if (stop || wsio_closing(ws)) {
+        if (stop || sws_closing(ws)) {
             break;
         }
         {
             ssize_t r = recv(fd, buf, sizeof buf, 0);
-            wsio_result in;
+            sws_result in;
             if (r <= 0) {
                 break;
             }
-            in = wsio_feed(ws, buf, (size_t)r);
-            if (in.err != WSIO_OK) {
+            in = sws_feed(ws, buf, (size_t)r);
+            if (in.err != SWS_OK) {
                 flush_ws(fd, ws);
                 break;
             }
             stop = handle_events(ws, in);
         }
     }
-    wsio_destroy(ws);
+    sws_destroy(ws);
 }
 
 int main(int argc, char **argv)
@@ -382,7 +382,7 @@ int main(int argc, char **argv)
         perror("listen");
         return 1;
     }
-    fprintf(stderr, "wsio echo server on port %d\n", port);
+    fprintf(stderr, "sws echo server on port %d\n", port);
     for (;;) {
         int c = accept(fd, NULL, NULL);
         if (c < 0) {

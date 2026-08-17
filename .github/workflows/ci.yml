@@ -13,7 +13,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - name: Configure
-        run: cmake -B build -DWSIO_SANITIZE=ON
+        run: cmake -B build -DSWS_SANITIZE=ON
       - name: Build
         run: cmake --build build
       - name: Test
