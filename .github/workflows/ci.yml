@@ -10,9 +10,6 @@ concurrency:
 jobs:
   style:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      pull-requests: read
     steps:
       - uses: actions/checkout@v4
       - name: Configure
@@ -27,8 +24,7 @@ jobs:
           tidy-checks: ""
           extensions: c,h
           database: build
-          files-changed-only: ${{ github.event_name == 'pull_request' }}
-          lines-changed-only: false
+          files-changed-only: false
       - name: Fail if style checks failed
         if: steps.linter.outputs.checks-failed > 0
         run: exit 1
