@@ -473,7 +473,9 @@ static void test_send_close_and_client_mask(void)
     EXPECT(wsio_send_text(cli, (const uint8_t *)"a", 1) == WSIO_OK);
     p = wsio_peek(cli, &n);
     EXPECT(p && n >= 7);
-    EXPECT((p[1] & 0x80) != 0); /* masked */
+    if (p && n >= 7) {
+        EXPECT((p[1] & 0x80) != 0); /* masked */
+    }
 
     EXPECT(wsio_send_close(cli, 1000, (const uint8_t *)"done", 4) == WSIO_OK);
     EXPECT(wsio_closing(cli));

@@ -29,57 +29,49 @@ typedef struct {
 } ev_item;
 
 struct wsio {
-    wsio_role role;
     size_t max_message_size;
-    bool auto_pong;
-    bool auto_close;
     uint32_t (*rng)(void *);
     void *rng_ctx;
-    uint32_t rng_state;
-
-    parse_st st;
-    uint8_t hdr[14];
     size_t hdr_got;
     size_t hdr_need;
-
-    bool fin;
-    int opcode;
-    bool masked;
     uint64_t payload_len;
-    uint8_t mask_key[4];
     uint64_t payload_got;
-    unsigned mask_off;
-
-    int msg_opcode;
-    int msg_kind;
     uint8_t *msg;
     size_t msg_len;
     size_t msg_cap;
-    bool msg_pending;
-    wsio_utf8 utf8;
-
-    uint8_t ctrl[WSIO_CTRL_MAX];
     size_t ctrl_len;
-
     uint8_t *in;
     size_t in_len;
     size_t in_cap;
-
     uint8_t *out;
     size_t out_len;
     size_t out_off;
     size_t out_cap;
-
+    uint8_t *held; /**< Last polled control payload; freed on the next mutate. */
     ev_item evq[WSIO_EVQ];
+    wsio_role role;
+    uint32_t rng_state;
+    parse_st st;
+    int opcode;
+    unsigned mask_off;
+    int msg_opcode;
+    int msg_kind;
     int ev_r;
     int ev_w;
     int ev_n;
-    uint8_t *held; /**< Last polled control payload; freed on the next mutate. */
-
+    wsio_err last_err;
+    wsio_utf8 utf8;
+    uint16_t close_code;
+    bool auto_pong;
+    bool auto_close;
+    bool fin;
+    bool masked;
+    bool msg_pending;
     bool close_sent;
     bool close_recv;
-    uint16_t close_code;
-    wsio_err last_err;
+    uint8_t mask_key[4];
+    uint8_t hdr[14];
+    uint8_t ctrl[WSIO_CTRL_MAX];
 };
 
 static uint32_t default_rng(void *ctx)
