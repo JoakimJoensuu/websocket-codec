@@ -702,33 +702,31 @@ void wsio_destroy(wsio *ws)
     free(ws);
 }
 
-int wsio_feed(wsio *ws, const uint8_t *src, size_t len, const wsio_event **evs, size_t *n)
+static wsio_result make_result(wsio *ws, wsio_err err)
 {
-    int rc;
+    wsio_result r;
+    r.err = err;
+    r.evs = ws->ev_n ? ws->evs : NULL;
+    r.n = ws->ev_n;
+    return r;
+}
+
+wsio_result wsio_feed(wsio *ws, const uint8_t *src, size_t len)
+{
     bug(ws != NULL);
-    bug(evs != NULL);
-    bug(n != NULL);
     bug(!(len && !src));
     clear_events(ws);
     if (ws->st == ST_DEAD) {
-        *evs = NULL;
-        *n = 0;
-        return ws->last_err ? (int)ws->last_err : WSIO_ERR_CLOSED;
+        return make_result(ws, ws->last_err ? ws->last_err : WSIO_ERR_CLOSED);
     }
     if (len) {
         if (buf_reserve(&ws->in, &ws->in_cap, ws->in_len + len) != 0) {
-            rc = fail(ws, WSIO_ERR_NOMEM, WSIO_CLOSE_INTERNAL, "oom");
-            *evs = ws->evs;
-            *n = ws->ev_n;
-            return rc;
+            return make_result(ws, (wsio_err)fail(ws, WSIO_ERR_NOMEM, WSIO_CLOSE_INTERNAL, "oom"));
         }
         memcpy(ws->in + ws->in_len, src, len);
         ws->in_len += len;
     }
-    rc = parse_in(ws);
-    *evs = ws->ev_n ? ws->evs : NULL;
-    *n = ws->ev_n;
-    return rc;
+    return make_result(ws, (wsio_err)parse_in(ws));
 }
 
 size_t wsio_pending(const wsio *ws)

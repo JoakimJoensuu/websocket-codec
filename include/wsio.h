@@ -72,7 +72,7 @@ typedef enum {
 } wsio_event_kind;
 
 /**
- * Payload bytes are copied. The batch from wsio_feed is valid until the next
+ * Payload bytes are copied. A wsio_result batch is valid until the next
  * wsio_feed or wsio_destroy; send does not invalidate it.
  */
 typedef struct wsio_event {
@@ -81,6 +81,13 @@ typedef struct wsio_event {
     size_t len;
     uint16_t close_code; /**< WSIO_EV_CLOSE and WSIO_EV_ERROR. */
 } wsio_event;
+
+/** Inbound result of wsio_feed. */
+typedef struct wsio_result {
+    wsio_err err;
+    const wsio_event *evs;
+    size_t n;
+} wsio_result;
 
 typedef struct wsio_config {
     wsio_role role;
@@ -102,11 +109,11 @@ wsio *wsio_create_cfg(const wsio_config *cfg);
 void wsio_destroy(wsio *ws);
 
 /**
- * Parse @p src. Completed frames are copied into @p *evs (count @p *n).
+ * Parse @p src. Completed frames are copied into the returned batch.
  * Unparsed tail is kept internally. After a protocol failure a Close is
  * queued when possible; still drain output.
  */
-int wsio_feed(wsio *ws, const uint8_t *src, size_t len, const wsio_event **evs, size_t *n);
+wsio_result wsio_feed(wsio *ws, const uint8_t *src, size_t len);
 
 size_t wsio_pending(const wsio *ws);
 

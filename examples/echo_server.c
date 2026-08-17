@@ -271,20 +271,20 @@ static int flush_ws(int fd, wsio *ws)
     }
 }
 
-static bool handle_events(wsio *ws, const wsio_event *evs, size_t n)
+static bool handle_events(wsio *ws, wsio_result in)
 {
     size_t i;
     bool stop = false;
-    for (i = 0; i < n; i++) {
-        if (evs[i].kind == WSIO_EV_TEXT) {
-            if (wsio_send_text(ws, evs[i].data, evs[i].len) != WSIO_OK) {
+    for (i = 0; i < in.n; i++) {
+        if (in.evs[i].kind == WSIO_EV_TEXT) {
+            if (wsio_send_text(ws, in.evs[i].data, in.evs[i].len) != WSIO_OK) {
                 stop = true;
             }
-        } else if (evs[i].kind == WSIO_EV_BIN) {
-            if (wsio_send_bin(ws, evs[i].data, evs[i].len) != WSIO_OK) {
+        } else if (in.evs[i].kind == WSIO_EV_BIN) {
+            if (wsio_send_bin(ws, in.evs[i].data, in.evs[i].len) != WSIO_OK) {
                 stop = true;
             }
-        } else if (evs[i].kind == WSIO_EV_CLOSE || evs[i].kind == WSIO_EV_ERROR) {
+        } else if (in.evs[i].kind == WSIO_EV_CLOSE || in.evs[i].kind == WSIO_EV_ERROR) {
             stop = true;
         }
     }
@@ -299,8 +299,6 @@ static void session(int fd)
     size_t nleft = 0;
     uint8_t buf[64 * 1024];
     int one = 1;
-    const wsio_event *evs = NULL;
-    size_t nev = 0;
     bool stop = false;
 
     setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &one, sizeof one);
@@ -319,12 +317,13 @@ static void session(int fd)
     }
 
     if (nleft) {
-        if (wsio_feed(ws, leftover, nleft, &evs, &nev) != WSIO_OK) {
+        wsio_result in = wsio_feed(ws, leftover, nleft);
+        if (in.err != WSIO_OK) {
             flush_ws(fd, ws);
             wsio_destroy(ws);
             return;
         }
-        stop = handle_events(ws, evs, nev);
+        stop = handle_events(ws, in);
     }
 
     for (;;) {
@@ -336,14 +335,16 @@ static void session(int fd)
         }
         {
             ssize_t r = recv(fd, buf, sizeof buf, 0);
+            wsio_result in;
             if (r <= 0) {
                 break;
             }
-            if (wsio_feed(ws, buf, (size_t)r, &evs, &nev) != WSIO_OK) {
+            in = wsio_feed(ws, buf, (size_t)r);
+            if (in.err != WSIO_OK) {
                 flush_ws(fd, ws);
                 break;
             }
-            stop = handle_events(ws, evs, nev);
+            stop = handle_events(ws, in);
         }
     }
     wsio_destroy(ws);
