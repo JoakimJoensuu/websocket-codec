@@ -2,7 +2,8 @@ name: ci
 
 on:
   push:
-  # Not pull_request: a PR-head push would then run twice.
+    branches: [main]
+  pull_request:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
