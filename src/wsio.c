@@ -5,7 +5,6 @@
 #include <string.h>
 
 #define WSIO_DEFAULT_MAX (16u * 1024u * 1024u)
-#define WSIO_EVQ 16
 #define WSIO_CTRL_MAX 125
 
 static void bug(bool ok)
@@ -20,13 +19,6 @@ typedef enum {
     ST_PAYLOAD,
     ST_DEAD
 } parse_st;
-
-typedef struct {
-    wsio_event_kind kind;
-    uint16_t close_code;
-    size_t len;
-    uint8_t *data;
-} ev_item;
 
 struct wsio {
     size_t max_message_size;
@@ -47,18 +39,15 @@ struct wsio {
     size_t out_len;
     size_t out_off;
     size_t out_cap;
-    uint8_t *held; /**< Last polled control payload; freed on the next mutate. */
-    ev_item evq[WSIO_EVQ];
+    wsio_event *evs;
+    size_t ev_n;
+    size_t ev_cap;
     wsio_role role;
     uint32_t rng_state;
     parse_st st;
     int opcode;
     unsigned mask_off;
     int msg_opcode;
-    int msg_kind;
-    int ev_r;
-    int ev_w;
-    int ev_n;
     wsio_err last_err;
     wsio_utf8 utf8;
     uint16_t close_code;
@@ -66,7 +55,6 @@ struct wsio {
     bool auto_close;
     bool fin;
     bool masked;
-    bool msg_pending;
     bool close_sent;
     bool close_recv;
     uint8_t mask_key[4];
@@ -198,33 +186,47 @@ static int out_reserve(wsio *ws, size_t extra)
     return buf_reserve(&ws->out, &ws->out_cap, ws->out_len + extra);
 }
 
-static void drop_held(wsio *ws)
+static void clear_events(wsio *ws)
 {
-    free(ws->held);
-    ws->held = NULL;
+    size_t i;
+    for (i = 0; i < ws->ev_n; i++) {
+        free((void *)ws->evs[i].data);
+        ws->evs[i].data = NULL;
+    }
+    ws->ev_n = 0;
 }
 
 static int ev_push(wsio *ws, wsio_event_kind kind, const uint8_t *data, size_t len,
                    uint16_t close_code)
 {
-    ev_item *e;
-    if (ws->ev_n >= WSIO_EVQ) {
-        return -1;
-    }
-    e = &ws->evq[ws->ev_w];
-    e->kind = kind;
-    e->close_code = close_code;
-    e->len = len;
-    e->data = NULL;
-    if (len > 0) {
-        e->data = (uint8_t *)malloc(len);
-        if (!e->data) {
+    wsio_event *e;
+    uint8_t *copy = NULL;
+    if (ws->ev_n == ws->ev_cap) {
+        size_t ncap = ws->ev_cap ? ws->ev_cap * 2 : 8;
+        wsio_event *nbuf;
+        if (ncap <= ws->ev_cap) {
             return -1;
         }
-        memcpy(e->data, data, len);
+        nbuf = (wsio_event *)realloc(ws->evs, ncap * sizeof *nbuf);
+        if (!nbuf) {
+            return -1;
+        }
+        ws->evs = nbuf;
+        ws->ev_cap = ncap;
     }
-    ws->ev_w = (ws->ev_w + 1) % WSIO_EVQ;
-    ws->ev_n++;
+    if (len > 0) {
+        bug(data != NULL);
+        copy = (uint8_t *)malloc(len);
+        if (!copy) {
+            return -1;
+        }
+        memcpy(copy, data, len);
+    }
+    e = &ws->evs[ws->ev_n++];
+    e->kind = kind;
+    e->data = copy;
+    e->len = len;
+    e->close_code = close_code;
     return 0;
 }
 
@@ -350,13 +352,19 @@ static int header_len(uint8_t b1)
 
 static int finish_message(wsio *ws)
 {
+    wsio_event_kind kind;
     if (ws->msg_opcode == WSIO_OP_TEXT) {
         if (wsio_utf8_finish(&ws->utf8) != 0) {
             return fail(ws, WSIO_ERR_UTF8, WSIO_CLOSE_INVALID_DATA, "invalid utf-8");
         }
+        kind = WSIO_EV_TEXT;
+    } else {
+        kind = WSIO_EV_BIN;
     }
-    ws->msg_kind = ws->msg_opcode;
-    ws->msg_pending = true;
+    if (ev_push(ws, kind, ws->msg, ws->msg_len, 0) != 0) {
+        return fail(ws, WSIO_ERR_NOMEM, WSIO_CLOSE_INTERNAL, "oom");
+    }
+    ws->msg_len = 0;
     return WSIO_OK;
 }
 
@@ -439,7 +447,6 @@ static int dispatch_empty_or_start(wsio *ws)
     return WSIO_OK;
 }
 
-/* Returns 1 if the caller should leave the header bytes unconsumed. */
 static int on_frame_header(wsio *ws)
 {
     uint8_t b0 = ws->hdr[0];
@@ -506,9 +513,6 @@ static int on_frame_header(wsio *ws)
             if (ws->msg_opcode != 0) {
                 return fail(ws, WSIO_ERR_PROTOCOL, WSIO_CLOSE_PROTOCOL,
                             "new data while fragmented");
-            }
-            if (ws->msg_pending) {
-                return 1;
             }
         }
         if (plen > (uint64_t)ws->max_message_size ||
@@ -620,19 +624,6 @@ static int parse_in(wsio *ws)
                 continue;
             }
             rc = on_frame_header(ws);
-            if (rc == 1) {
-                /* Restore header bytes into `in` so a later poll can retry. */
-                size_t h = ws->hdr_got;
-                if (buf_reserve(&ws->in, &ws->in_cap, ws->in_len + h) != 0) {
-                    return fail(ws, WSIO_ERR_NOMEM, WSIO_CLOSE_INTERNAL, "oom");
-                }
-                memmove(ws->in + h, ws->in, ws->in_len);
-                memcpy(ws->in, ws->hdr, h);
-                ws->in_len += h;
-                ws->hdr_got = 0;
-                ws->hdr_need = 2;
-                break;
-            }
             if (rc < 0) {
                 return rc;
             }
@@ -700,36 +691,44 @@ wsio *wsio_create_cfg(const wsio_config *cfg)
 
 void wsio_destroy(wsio *ws)
 {
-    int i;
     if (!ws) {
         return;
     }
+    clear_events(ws);
+    free(ws->evs);
     free(ws->msg);
     free(ws->in);
     free(ws->out);
-    free(ws->held);
-    for (i = 0; i < WSIO_EVQ; i++) {
-        free(ws->evq[i].data);
-    }
     free(ws);
 }
 
-int wsio_feed(wsio *ws, const uint8_t *src, size_t len)
+int wsio_feed(wsio *ws, const uint8_t *src, size_t len, const wsio_event **evs, size_t *n)
 {
+    int rc;
     bug(ws != NULL);
+    bug(evs != NULL);
+    bug(n != NULL);
     bug(!(len && !src));
-    drop_held(ws);
+    clear_events(ws);
     if (ws->st == ST_DEAD) {
+        *evs = NULL;
+        *n = 0;
         return ws->last_err ? (int)ws->last_err : WSIO_ERR_CLOSED;
     }
     if (len) {
         if (buf_reserve(&ws->in, &ws->in_cap, ws->in_len + len) != 0) {
-            return fail(ws, WSIO_ERR_NOMEM, WSIO_CLOSE_INTERNAL, "oom");
+            rc = fail(ws, WSIO_ERR_NOMEM, WSIO_CLOSE_INTERNAL, "oom");
+            *evs = ws->evs;
+            *n = ws->ev_n;
+            return rc;
         }
         memcpy(ws->in + ws->in_len, src, len);
         ws->in_len += len;
     }
-    return parse_in(ws);
+    rc = parse_in(ws);
+    *evs = ws->ev_n ? ws->evs : NULL;
+    *n = ws->ev_n;
+    return rc;
 }
 
 size_t wsio_pending(const wsio *ws)
@@ -785,58 +784,6 @@ size_t wsio_write(wsio *ws, uint8_t *dst, size_t cap)
     return n;
 }
 
-static wsio_event pop_control(wsio *ws)
-{
-    wsio_event ev;
-    ev_item *e = &ws->evq[ws->ev_r];
-    memset(&ev, 0, sizeof ev);
-    ev.kind = e->kind;
-    ev.close_code = e->close_code;
-    ev.len = e->len;
-    ev.data = e->data;
-    ws->held = e->data;
-    e->data = NULL;
-    ws->ev_r = (ws->ev_r + 1) % WSIO_EVQ;
-    ws->ev_n--;
-    return ev;
-}
-
-static wsio_event pop_message(wsio *ws)
-{
-    wsio_event ev;
-    memset(&ev, 0, sizeof ev);
-    ev.kind = (ws->msg_kind == WSIO_OP_BIN) ? WSIO_EV_BIN : WSIO_EV_TEXT;
-    ev.data = ws->msg;
-    ev.len = ws->msg_len;
-    ws->msg_pending = false;
-    return ev;
-}
-
-wsio_event wsio_poll(wsio *ws)
-{
-    wsio_event ev;
-    bug(ws != NULL);
-    memset(&ev, 0, sizeof ev);
-    ev.kind = WSIO_EV_NONE;
-    drop_held(ws);
-
-    if (ws->ev_n > 0) {
-        return pop_control(ws);
-    }
-    if (ws->msg_pending) {
-        return pop_message(ws);
-    }
-    /* Safe to reuse msg[]: the previous message was already polled. */
-    parse_in(ws);
-    if (ws->ev_n > 0) {
-        return pop_control(ws);
-    }
-    if (ws->msg_pending) {
-        return pop_message(ws);
-    }
-    return ev;
-}
-
 int wsio_send(wsio *ws, wsio_opcode opcode, const uint8_t *data, size_t len, bool fin)
 {
     bug(ws != NULL);
@@ -850,7 +797,6 @@ int wsio_send(wsio *ws, wsio_opcode opcode, const uint8_t *data, size_t len, boo
         }
         bug(wsio_utf8_finish(&u) == 0);
     }
-    drop_held(ws);
     return encode_frame(ws, fin, (int)opcode, data, len);
 }
 
@@ -880,7 +826,6 @@ int wsio_send_close(wsio *ws, uint16_t code, const uint8_t *reason, size_t reaso
     size_t plen;
     bug(ws != NULL);
     bug(!ws->close_sent);
-    drop_held(ws);
     if (code == 0) {
         bug(reason_len == 0);
         return encode_frame(ws, true, WSIO_OP_CLOSE, NULL, 0);

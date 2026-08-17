@@ -270,6 +270,26 @@ static int flush_ws(int fd, wsio *ws)
     }
 }
 
+static bool handle_events(wsio *ws, const wsio_event *evs, size_t n)
+{
+    size_t i;
+    bool stop = false;
+    for (i = 0; i < n; i++) {
+        if (evs[i].kind == WSIO_EV_TEXT) {
+            if (wsio_send_text(ws, evs[i].data, evs[i].len) != WSIO_OK) {
+                stop = true;
+            }
+        } else if (evs[i].kind == WSIO_EV_BIN) {
+            if (wsio_send_bin(ws, evs[i].data, evs[i].len) != WSIO_OK) {
+                stop = true;
+            }
+        } else if (evs[i].kind == WSIO_EV_CLOSE || evs[i].kind == WSIO_EV_ERROR) {
+            stop = true;
+        }
+    }
+    return stop;
+}
+
 static void session(int fd)
 {
     wsio_config cfg;
@@ -278,6 +298,9 @@ static void session(int fd)
     size_t nleft = 0;
     uint8_t buf[64 * 1024];
     int one = 1;
+    const wsio_event *evs = NULL;
+    size_t nev = 0;
+    bool stop = false;
 
     setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &one, sizeof one);
     if (handshake(fd, leftover, &nleft, sizeof leftover) != 0) {
@@ -294,32 +317,16 @@ static void session(int fd)
         return;
     }
 
-    if (nleft && wsio_feed(ws, leftover, nleft) != WSIO_OK) {
-        flush_ws(fd, ws);
-        wsio_destroy(ws);
-        return;
+    if (nleft) {
+        if (wsio_feed(ws, leftover, nleft, &evs, &nev) != WSIO_OK) {
+            flush_ws(fd, ws);
+            wsio_destroy(ws);
+            return;
+        }
+        stop = handle_events(ws, evs, nev);
     }
 
     for (;;) {
-        wsio_event ev;
-        bool stop = false;
-        for (;;) {
-            ev = wsio_poll(ws);
-            if (ev.kind == WSIO_EV_NONE) {
-                break;
-            }
-            if (ev.kind == WSIO_EV_TEXT) {
-                if (wsio_send_text(ws, ev.data, ev.len) != WSIO_OK) {
-                    stop = true;
-                }
-            } else if (ev.kind == WSIO_EV_BIN) {
-                if (wsio_send_bin(ws, ev.data, ev.len) != WSIO_OK) {
-                    stop = true;
-                }
-            } else if (ev.kind == WSIO_EV_CLOSE || ev.kind == WSIO_EV_ERROR) {
-                stop = true;
-            }
-        }
         if (flush_ws(fd, ws) != 0) {
             break;
         }
@@ -331,10 +338,11 @@ static void session(int fd)
             if (r <= 0) {
                 break;
             }
-            if (wsio_feed(ws, buf, (size_t)r) != WSIO_OK) {
+            if (wsio_feed(ws, buf, (size_t)r, &evs, &nev) != WSIO_OK) {
                 flush_ws(fd, ws);
                 break;
             }
+            stop = handle_events(ws, evs, nev);
         }
     }
     wsio_destroy(ws);

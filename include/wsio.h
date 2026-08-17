@@ -71,7 +71,10 @@ typedef enum {
     WSIO_EV_ERROR /**< A Close frame is usually queued. */
 } wsio_event_kind;
 
-/** @p data is valid until the next wsio_feed, wsio_poll, wsio_send*, or wsio_destroy. */
+/**
+ * Payload bytes are copied. The batch from wsio_feed is valid until the next
+ * wsio_feed or wsio_destroy; send does not invalidate it.
+ */
 typedef struct wsio_event {
     wsio_event_kind kind;
     const uint8_t *data;
@@ -99,10 +102,11 @@ wsio *wsio_create_cfg(const wsio_config *cfg);
 void wsio_destroy(wsio *ws);
 
 /**
- * Unparsed tail is copied internally. After a protocol failure a Close is
+ * Parse @p src. Completed frames are copied into @p *evs (count @p *n).
+ * Unparsed tail is kept internally. After a protocol failure a Close is
  * queued when possible; still drain output.
  */
-int wsio_feed(wsio *ws, const uint8_t *src, size_t len);
+int wsio_feed(wsio *ws, const uint8_t *src, size_t len, const wsio_event **evs, size_t *n);
 
 size_t wsio_pending(const wsio *ws);
 
@@ -111,8 +115,6 @@ const uint8_t *wsio_peek(const wsio *ws, size_t *len);
 void wsio_consume(wsio *ws, size_t n);
 
 size_t wsio_write(wsio *ws, uint8_t *dst, size_t cap);
-
-wsio_event wsio_poll(wsio *ws);
 
 /** Text with @p fin set must be valid UTF-8. Use this for explicit fragmentation. */
 int wsio_send(wsio *ws, wsio_opcode opcode, const uint8_t *data, size_t len, bool fin);

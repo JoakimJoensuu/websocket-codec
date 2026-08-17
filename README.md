@@ -28,13 +28,16 @@ cmake -B build && cmake --build build && ctest --test-dir build
 wsio *ws = wsio_create(WSIO_ROLE_SERVER); /* or WSIO_ROLE_CLIENT */
 
 /* inbound TCP bytes */
-wsio_feed(ws, buf, n);
-
-for (;;) {
-    wsio_event ev = wsio_poll(ws);
-    if (ev.kind == WSIO_EV_NONE) break;
-    if (ev.kind == WSIO_EV_TEXT)  wsio_send_text(ws, ev.data, ev.len);
-    if (ev.kind == WSIO_EV_BIN)   wsio_send_bin(ws, ev.data, ev.len);
+const wsio_event *evs;
+size_t n_ev, i;
+wsio_feed(ws, buf, n, &evs, &n_ev);
+for (i = 0; i < n_ev; i++) {
+    if (evs[i].kind == WSIO_EV_TEXT) {
+        wsio_send_text(ws, evs[i].data, evs[i].len);
+    }
+    if (evs[i].kind == WSIO_EV_BIN) {
+        wsio_send_bin(ws, evs[i].data, evs[i].len);
+    }
     /* ping is auto-answered; close is auto-answered unless you disable it */
 }
 
