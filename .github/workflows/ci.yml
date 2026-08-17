@@ -25,6 +25,7 @@ jobs:
           extensions: c,h
           database: build
           files-changed-only: false
+          ignore: ".github|build"
       - name: Fail if style checks failed
         if: steps.linter.outputs.checks-failed > 0
         run: exit 1
