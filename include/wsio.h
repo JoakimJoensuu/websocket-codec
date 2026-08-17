@@ -81,7 +81,7 @@ typedef struct wsio_event {
 
 typedef struct wsio_config {
     wsio_role role;
-    size_t max_message_size;    /**< 0 means 16 MiB. */
+    size_t max_message_size; /**< 0 means 16 MiB. */
     bool auto_pong;
     bool auto_close;
     uint32_t (*rng)(void *ctx); /**< NULL uses an internal PRNG (not a CSPRNG). */

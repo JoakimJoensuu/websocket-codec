@@ -93,8 +93,7 @@ bool wsio_close_code_valid(uint16_t code)
     if (code >= 3000u && code <= 4999u) {
         return true;
     }
-    if (code >= 1000u && code <= 1014u && code != 1004u && code != 1005u &&
-        code != 1006u) {
+    if (code >= 1000u && code <= 1014u && code != 1004u && code != 1005u && code != 1006u) {
         return true;
     }
     return false;
@@ -107,8 +106,8 @@ static bool is_control(int op)
 
 static bool is_known_opcode(int op)
 {
-    return op == WSIO_OP_CONT || op == WSIO_OP_TEXT || op == WSIO_OP_BIN ||
-           op == WSIO_OP_CLOSE || op == WSIO_OP_PING || op == WSIO_OP_PONG;
+    return op == WSIO_OP_CONT || op == WSIO_OP_TEXT || op == WSIO_OP_BIN || op == WSIO_OP_CLOSE ||
+           op == WSIO_OP_PING || op == WSIO_OP_PONG;
 }
 
 static uint16_t rd16(const uint8_t *p)
@@ -505,7 +504,8 @@ static int on_frame_header(wsio *ws)
             }
         } else {
             if (ws->msg_opcode != 0) {
-                return fail(ws, WSIO_ERR_PROTOCOL, WSIO_CLOSE_PROTOCOL, "new data while fragmented");
+                return fail(ws, WSIO_ERR_PROTOCOL, WSIO_CLOSE_PROTOCOL,
+                            "new data while fragmented");
             }
             if (ws->msg_pending) {
                 return 1;

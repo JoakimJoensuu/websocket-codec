@@ -6,12 +6,12 @@
 
 static int g_fail;
 
-#define EXPECT(cond)                                                             \
-    do {                                                                         \
-        if (!(cond)) {                                                           \
-            fprintf(stderr, "FAIL %s:%d: %s\n", __FILE__, __LINE__, #cond);      \
-            g_fail = 1;                                                          \
-        }                                                                        \
+#define EXPECT(cond)                                                        \
+    do {                                                                    \
+        if (!(cond)) {                                                      \
+            fprintf(stderr, "FAIL %s:%d: %s\n", __FILE__, __LINE__, #cond); \
+            g_fail = 1;                                                     \
+        }                                                                   \
     } while (0)
 
 static void wr16(uint8_t *p, uint16_t v)
@@ -37,8 +37,8 @@ static void apply_mask(uint8_t *p, size_t n, const uint8_t key[4])
     }
 }
 
-static size_t build_frame(uint8_t *out, bool fin, int opcode, bool mask,
-                          const uint8_t *payload, size_t len, const uint8_t key[4])
+static size_t build_frame(uint8_t *out, bool fin, int opcode, bool mask, const uint8_t *payload,
+                          size_t len, const uint8_t key[4])
 {
     size_t h = 2;
     out[0] = (uint8_t)((fin ? 0x80u : 0u) | (opcode & 0x0Fu));
