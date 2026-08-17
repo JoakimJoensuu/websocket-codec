@@ -15,15 +15,23 @@ jobs:
       pull-requests: read
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - uses: KyleMayes/install-llvm-action@v2
+      - name: Configure
+        run: cmake -B build
+      - uses: cpp-linter/cpp-linter-action@v2
+        id: linter
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           version: "18"
-      - name: clang-format and clang-tidy
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: ./scripts/check-style.sh --ci
+          style: file
+          tidy-checks: ""
+          extensions: c,h
+          database: build
+          files-changed-only: ${{ github.event_name == 'pull_request' }}
+          lines-changed-only: false
+      - name: Fail if style checks failed
+        if: steps.linter.outputs.checks-failed > 0
+        run: exit 1
 
   unit:
     runs-on: ubuntu-latest
