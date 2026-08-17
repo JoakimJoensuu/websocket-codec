@@ -6,6 +6,7 @@
  * After the opening handshake, feed socket bytes in and drain protocol bytes out.
  */
 
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -81,8 +82,8 @@ typedef struct wsio_event {
 typedef struct wsio_config {
     wsio_role role;
     size_t max_message_size;    /**< 0 means 16 MiB. */
-    int auto_pong;
-    int auto_close;
+    bool auto_pong;
+    bool auto_close;
     uint32_t (*rng)(void *ctx); /**< NULL uses an internal PRNG (not a CSPRNG). */
     void *rng_ctx;
 } wsio_config;
@@ -91,7 +92,7 @@ typedef struct wsio wsio;
 
 wsio *wsio_create(wsio_role role);
 
-/** Unlike wsio_create, auto_pong / auto_close are used as given (0 = off). */
+/** Unlike wsio_create, auto_pong / auto_close are used as given (false = off). */
 wsio *wsio_create_cfg(const wsio_config *cfg);
 
 /** NULL is allowed. */
@@ -114,7 +115,7 @@ size_t wsio_write(wsio *ws, uint8_t *dst, size_t cap);
 wsio_event wsio_poll(wsio *ws);
 
 /** Text with @p fin set must be valid UTF-8. Use this for explicit fragmentation. */
-int wsio_send(wsio *ws, wsio_opcode opcode, const uint8_t *data, size_t len, int fin);
+int wsio_send(wsio *ws, wsio_opcode opcode, const uint8_t *data, size_t len, bool fin);
 
 int wsio_send_text(wsio *ws, const uint8_t *data, size_t len);
 
@@ -131,16 +132,16 @@ int wsio_send_pong(wsio *ws, const uint8_t *data, size_t len);
  */
 int wsio_send_close(wsio *ws, uint16_t code, const uint8_t *reason, size_t reason_len);
 
-int wsio_closing(const wsio *ws);
+bool wsio_closing(const wsio *ws);
 
-int wsio_closed(const wsio *ws);
+bool wsio_closed(const wsio *ws);
 
 wsio_err wsio_error(const wsio *ws);
 
 uint16_t wsio_last_close(const wsio *ws);
 
 /** True for 1000–1014 except 1004/1005/1006, and for 3000–4999. */
-int wsio_close_code_valid(uint16_t code);
+bool wsio_close_code_valid(uint16_t code);
 
 #ifdef __cplusplus
 }

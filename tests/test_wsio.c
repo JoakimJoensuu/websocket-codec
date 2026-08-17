@@ -37,7 +37,7 @@ static void apply_mask(uint8_t *p, size_t n, const uint8_t key[4])
     }
 }
 
-static size_t build_frame(uint8_t *out, int fin, int opcode, int mask,
+static size_t build_frame(uint8_t *out, bool fin, int opcode, bool mask,
                           const uint8_t *payload, size_t len, const uint8_t key[4])
 {
     size_t h = 2;
@@ -392,8 +392,8 @@ static void test_too_big(void)
     memset(&cfg, 0, sizeof cfg);
     cfg.role = WSIO_ROLE_SERVER;
     cfg.max_message_size = 4;
-    cfg.auto_pong = 1;
-    cfg.auto_close = 1;
+    cfg.auto_pong = true;
+    cfg.auto_close = true;
     srv = wsio_create_cfg(&cfg);
     n = build_frame(frame, 1, WSIO_OP_BIN, 1, payload, 8, KEY);
     EXPECT(wsio_feed(srv, frame, n) == WSIO_ERR_TOO_BIG);

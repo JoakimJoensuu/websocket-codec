@@ -288,8 +288,8 @@ static void session(int fd)
     memset(&cfg, 0, sizeof cfg);
     cfg.role = WSIO_ROLE_SERVER;
     cfg.max_message_size = 32u * 1024u * 1024u;
-    cfg.auto_pong = 1;
-    cfg.auto_close = 1;
+    cfg.auto_pong = true;
+    cfg.auto_close = true;
     ws = wsio_create_cfg(&cfg);
     if (!ws) {
         return;
@@ -303,7 +303,7 @@ static void session(int fd)
 
     for (;;) {
         wsio_event ev;
-        int stop = 0;
+        bool stop = false;
         for (;;) {
             ev = wsio_poll(ws);
             if (ev.kind == WSIO_EV_NONE) {
@@ -311,14 +311,14 @@ static void session(int fd)
             }
             if (ev.kind == WSIO_EV_TEXT) {
                 if (wsio_send_text(ws, ev.data, ev.len) != WSIO_OK) {
-                    stop = 1;
+                    stop = true;
                 }
             } else if (ev.kind == WSIO_EV_BIN) {
                 if (wsio_send_bin(ws, ev.data, ev.len) != WSIO_OK) {
-                    stop = 1;
+                    stop = true;
                 }
             } else if (ev.kind == WSIO_EV_CLOSE || ev.kind == WSIO_EV_ERROR) {
-                stop = 1;
+                stop = true;
             }
         }
         if (flush_ws(fd, ws) != 0) {
