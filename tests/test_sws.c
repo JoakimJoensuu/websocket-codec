@@ -61,7 +61,7 @@ static sws_result xfer(sws *from, sws *to)
         return r;
     }
     r = sws_feed(to, p, n);
-    sws_consume(from, n);
+    sws_mark_consumed(from, n);
     return r;
 }
 
@@ -100,13 +100,13 @@ Ensure(sws, exchanges_text)
 
     assert_that(client, is_non_null);
     assert_that(server, is_non_null);
-    assert_that(sws_send_text(client, (const uint8_t *)"hello", 5), is_equal_to(SWS_OK));
+    assert_that(sws_queue_text(client, (const uint8_t *)"hello", 5), is_equal_to(SWS_OK));
     r = xfer(client, server);
     assert_that(r.err, is_equal_to(SWS_OK));
     assert_that(r.n, is_equal_to(1));
     assert_payload(&r.evs[0], SWS_EV_TEXT, "hello", 5);
 
-    assert_that(sws_send_text(server, r.evs[0].data, r.evs[0].len), is_equal_to(SWS_OK));
+    assert_that(sws_queue_text(server, r.evs[0].data, r.evs[0].len), is_equal_to(SWS_OK));
     r = xfer(server, client);
     assert_that(r.err, is_equal_to(SWS_OK));
     assert_that(r.n, is_equal_to(1));
@@ -118,13 +118,13 @@ Ensure(sws, exchanges_binary_and_empty_text)
     const uint8_t payload[] = {0, 1, 255};
     sws_result r;
 
-    assert_that(sws_send_bin(client, payload, sizeof payload), is_equal_to(SWS_OK));
+    assert_that(sws_queue_bin(client, payload, sizeof payload), is_equal_to(SWS_OK));
     r = xfer(client, server);
     assert_that(r.err, is_equal_to(SWS_OK));
     assert_that(r.n, is_equal_to(1));
     assert_payload(&r.evs[0], SWS_EV_BIN, payload, sizeof payload);
 
-    assert_that(sws_send_text(client, NULL, 0), is_equal_to(SWS_OK));
+    assert_that(sws_queue_text(client, NULL, 0), is_equal_to(SWS_OK));
     r = xfer(client, server);
     assert_that(r.err, is_equal_to(SWS_OK));
     assert_that(r.n, is_equal_to(1));
@@ -144,7 +144,7 @@ Ensure(sws, exchanges_extended_and_64k_binary)
         payload[i] = (uint8_t)i;
     }
 
-    assert_that(sws_send_bin(client, payload, mid), is_equal_to(SWS_OK));
+    assert_that(sws_queue_bin(client, payload, mid), is_equal_to(SWS_OK));
     r = xfer(client, server);
     assert_that(r.err, is_equal_to(SWS_OK));
     assert_that(r.n, is_equal_to(1));
@@ -153,7 +153,7 @@ Ensure(sws, exchanges_extended_and_64k_binary)
     for (i = 0; i < big; i++) {
         payload[i] = (uint8_t)(i * 3);
     }
-    assert_that(sws_send_bin(client, payload, big), is_equal_to(SWS_OK));
+    assert_that(sws_queue_bin(client, payload, big), is_equal_to(SWS_OK));
     r = xfer(client, server);
     assert_that(r.err, is_equal_to(SWS_OK));
     assert_that(r.n, is_equal_to(1));
@@ -168,19 +168,19 @@ Ensure(sws, fragments_text_and_interleaves_ping)
     const uint8_t ping[] = {'p', 'i'};
     sws_result r;
 
-    assert_that(sws_send(client, SWS_OP_TEXT, a, sizeof a, false), is_equal_to(SWS_OK));
+    assert_that(sws_queue(client, SWS_OP_TEXT, a, sizeof a, false), is_equal_to(SWS_OK));
     r = xfer(client, server);
     assert_that(r.err, is_equal_to(SWS_OK));
     assert_that(r.n, is_equal_to(0));
 
-    assert_that(sws_send_ping(client, ping, sizeof ping), is_equal_to(SWS_OK));
+    assert_that(sws_queue_ping(client, ping, sizeof ping), is_equal_to(SWS_OK));
     r = xfer(client, server);
     assert_that(r.err, is_equal_to(SWS_OK));
     assert_that(r.n, is_equal_to(1));
     assert_payload(&r.evs[0], SWS_EV_PING, ping, sizeof ping);
     assert_that(sws_pending(server) > 0, is_true); /* auto pong */
 
-    assert_that(sws_send(client, SWS_OP_CONT, b, sizeof b, true), is_equal_to(SWS_OK));
+    assert_that(sws_queue(client, SWS_OP_CONT, b, sizeof b, true), is_equal_to(SWS_OK));
     r = xfer(client, server);
     assert_that(r.err, is_equal_to(SWS_OK));
     assert_that(r.n, is_equal_to(1));
@@ -193,9 +193,9 @@ Ensure(sws, reconstructs_utf8_split_across_fragments)
     const uint8_t f1[] = {0xA9};
     sws_result r;
 
-    assert_that(sws_send(client, SWS_OP_TEXT, f0, 1, false), is_equal_to(SWS_OK));
+    assert_that(sws_queue(client, SWS_OP_TEXT, f0, 1, false), is_equal_to(SWS_OK));
     assert_that(xfer(client, server).err, is_equal_to(SWS_OK));
-    assert_that(sws_send(client, SWS_OP_CONT, f1, 1, true), is_equal_to(SWS_OK));
+    assert_that(sws_queue(client, SWS_OP_CONT, f1, 1, true), is_equal_to(SWS_OK));
     r = xfer(client, server);
     assert_that(r.err, is_equal_to(SWS_OK));
     assert_that(r.n, is_equal_to(1));
@@ -240,7 +240,7 @@ Ensure(sws, close_handshake_echoes_reason_and_empty)
 {
     sws_result r;
 
-    assert_that(sws_send_close(client, 1000, (const uint8_t *)"bye", 3), is_equal_to(SWS_OK));
+    assert_that(sws_queue_close(client, 1000, (const uint8_t *)"bye", 3), is_equal_to(SWS_OK));
     assert_that(sws_closing(client), is_true);
     r = xfer(client, server);
     assert_that(r.err, is_equal_to(SWS_OK));
@@ -260,7 +260,7 @@ Ensure(sws, close_handshake_echoes_reason_and_empty)
     sws_destroy(server);
     client = sws_create(SWS_ROLE_CLIENT, TEST_MAX_MESSAGE);
     server = sws_create(SWS_ROLE_SERVER, TEST_MAX_MESSAGE);
-    assert_that(sws_send_close(client, 0, NULL, 0), is_equal_to(SWS_OK));
+    assert_that(sws_queue_close(client, 0, NULL, 0), is_equal_to(SWS_OK));
     r = xfer(client, server);
     assert_that(r.err, is_equal_to(SWS_OK));
     assert_that(r.n, is_equal_to(1));
@@ -274,7 +274,7 @@ Ensure(sws, feeds_a_valid_stream_one_byte_at_a_time)
     const uint8_t *p;
     sws_result r;
 
-    assert_that(sws_send_text(client, (const uint8_t *)"abc", 3), is_equal_to(SWS_OK));
+    assert_that(sws_queue_text(client, (const uint8_t *)"abc", 3), is_equal_to(SWS_OK));
     p = sws_peek(client, &n);
     assert_that(n > 0, is_true);
     r.err = SWS_OK;
@@ -284,7 +284,7 @@ Ensure(sws, feeds_a_valid_stream_one_byte_at_a_time)
         r = sws_feed(server, p + i, 1);
         assert_that(r.err, is_equal_to(SWS_OK));
     }
-    sws_consume(client, n);
+    sws_mark_consumed(client, n);
     assert_that(r.n, is_equal_to(1));
     assert_payload(&r.evs[0], SWS_EV_TEXT, "abc", 3);
 }
@@ -301,7 +301,7 @@ Ensure(sws, rejects_message_over_configured_max)
     cfg.max_message_size = 4;
     small = sws_create_cfg(&cfg);
     assert_that(small, is_non_null);
-    assert_that(sws_send_bin(client, payload, sizeof payload), is_equal_to(SWS_OK));
+    assert_that(sws_queue_bin(client, payload, sizeof payload), is_equal_to(SWS_OK));
     r = xfer(client, small);
     assert_that(r.err, is_equal_to(SWS_ERR_TOO_BIG));
     assert_that(sws_last_close(small), is_equal_to(SWS_CLOSE_TOO_BIG));
@@ -314,11 +314,11 @@ Ensure(sws, delivers_two_messages_from_one_feed)
     const uint8_t *p;
     sws_result r;
 
-    assert_that(sws_send_text(client, (const uint8_t *)"one", 3), is_equal_to(SWS_OK));
-    assert_that(sws_send_text(client, (const uint8_t *)"two!", 4), is_equal_to(SWS_OK));
+    assert_that(sws_queue_text(client, (const uint8_t *)"one", 3), is_equal_to(SWS_OK));
+    assert_that(sws_queue_text(client, (const uint8_t *)"two!", 4), is_equal_to(SWS_OK));
     p = sws_peek(client, &n);
     r = sws_feed(server, p, n);
-    sws_consume(client, n);
+    sws_mark_consumed(client, n);
     assert_that(r.err, is_equal_to(SWS_OK));
     assert_that(r.n, is_equal_to(2));
     assert_payload(&r.evs[0], SWS_EV_TEXT, "one", 3);
@@ -332,18 +332,18 @@ Ensure(sws, delivers_ping_and_completed_text_from_one_feed)
     sws_result r;
     const uint8_t ping[] = {'p'};
 
-    assert_that(sws_send(client, SWS_OP_TEXT, (const uint8_t *)"A", 1, false),
+    assert_that(sws_queue(client, SWS_OP_TEXT, (const uint8_t *)"A", 1, false),
                 is_equal_to(SWS_OK));
     r = xfer(client, server);
     assert_that(r.err, is_equal_to(SWS_OK));
     assert_that(r.n, is_equal_to(0));
 
-    assert_that(sws_send_ping(client, ping, 1), is_equal_to(SWS_OK));
-    assert_that(sws_send(client, SWS_OP_CONT, (const uint8_t *)"B", 1, true),
+    assert_that(sws_queue_ping(client, ping, 1), is_equal_to(SWS_OK));
+    assert_that(sws_queue(client, SWS_OP_CONT, (const uint8_t *)"B", 1, true),
                 is_equal_to(SWS_OK));
     p = sws_peek(client, &n);
     r = sws_feed(server, p, n);
-    sws_consume(client, n);
+    sws_mark_consumed(client, n);
     assert_that(r.err, is_equal_to(SWS_OK));
     assert_that(r.n, is_equal_to(2));
     assert_that(r.evs[0].kind, is_equal_to(SWS_EV_PING));

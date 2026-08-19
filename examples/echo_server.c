@@ -267,7 +267,7 @@ static int flush_ws(int fd, sws *ws)
         if (w == 0) {
             return -1;
         }
-        sws_consume(ws, (size_t)w);
+        sws_mark_consumed(ws, (size_t)w);
     }
 }
 
@@ -277,11 +277,11 @@ static bool handle_events(sws *ws, sws_result in)
     bool stop = false;
     for (i = 0; i < in.n; i++) {
         if (in.evs[i].kind == SWS_EV_TEXT) {
-            if (sws_send_text(ws, in.evs[i].data, in.evs[i].len) != SWS_OK) {
+            if (sws_queue_text(ws, in.evs[i].data, in.evs[i].len) != SWS_OK) {
                 stop = true;
             }
         } else if (in.evs[i].kind == SWS_EV_BIN) {
-            if (sws_send_bin(ws, in.evs[i].data, in.evs[i].len) != SWS_OK) {
+            if (sws_queue_bin(ws, in.evs[i].data, in.evs[i].len) != SWS_OK) {
                 stop = true;
             }
         } else if (in.evs[i].kind == SWS_EV_CLOSE || in.evs[i].kind == SWS_EV_ERROR) {

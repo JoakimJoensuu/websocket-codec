@@ -73,7 +73,7 @@ typedef enum {
  * @brief One completed inbound frame.
  *
  * Payload bytes are copied. A @c sws_result batch is valid until the next
- * sws_feed or sws_destroy; send does not invalidate it.
+ * sws_feed or sws_destroy; sws_queue_* does not invalidate it.
  */
 typedef struct sws_event {
     sws_event_kind kind;
@@ -134,7 +134,7 @@ void sws_destroy(sws *ws);
 sws_result sws_feed(sws *ws, const uint8_t *src, size_t len);
 
 /**
- * @return Outbound bytes not yet consumed.
+ * @return Outbound bytes still queued.
  */
 size_t sws_pending(const sws *ws);
 
@@ -142,69 +142,69 @@ size_t sws_pending(const sws *ws);
  * @brief View of the outbound buffer.
  * @param[out] len 0 if empty.
  * @return Pointer into the buffer, or NULL if empty.
- * @note Invalid after send, consume, write, or destroy.
+ * @note Invalid after queue, mark_consumed, write, or destroy.
  */
 const uint8_t *sws_peek(const sws *ws, size_t *len);
 
 /**
  * @param n May be less than sws_pending (partial socket write).
  */
-void sws_consume(sws *ws, size_t n);
+void sws_mark_consumed(sws *ws, size_t n);
 
 /**
- * @brief Copy outbound bytes into @p dst and consume them.
+ * @brief Copy outbound bytes into @p dst and mark them consumed.
  * @return Bytes copied, @c min(pending, cap).
  */
 size_t sws_write(sws *ws, uint8_t *dst, size_t cap);
 
 /**
- * @brief Queue one frame. Fragment with TEXT/BIN @p fin 0, CONT…, then @p fin 1.
+ * @brief One frame. Fragment with TEXT/BIN @p fin 0, CONT…, then @p fin 1.
  * @param opcode Control frames must be fin and ≤125 bytes.
  * @param fin TEXT with fin requires valid UTF-8.
  * @return #SWS_OK or #SWS_ERR_NOMEM.
  */
-sws_err sws_send(sws *ws, sws_opcode opcode, const uint8_t *data, size_t len, bool fin);
+sws_err sws_queue(sws *ws, sws_opcode opcode, const uint8_t *data, size_t len, bool fin);
 
 /**
  * @brief One FIN text frame.
  * @param data Valid UTF-8.
  * @return #SWS_OK or #SWS_ERR_NOMEM.
  */
-sws_err sws_send_text(sws *ws, const uint8_t *data, size_t len);
+sws_err sws_queue_text(sws *ws, const uint8_t *data, size_t len);
 
 /**
  * @brief One FIN binary frame; payload is not UTF-8-checked.
  * @return #SWS_OK or #SWS_ERR_NOMEM.
  */
-sws_err sws_send_bin(sws *ws, const uint8_t *data, size_t len);
+sws_err sws_queue_bin(sws *ws, const uint8_t *data, size_t len);
 
 /**
  * @param data At most 125 bytes.
  * @return #SWS_OK or #SWS_ERR_NOMEM.
  */
-sws_err sws_send_ping(sws *ws, const uint8_t *data, size_t len);
+sws_err sws_queue_ping(sws *ws, const uint8_t *data, size_t len);
 
 /**
  * @param data At most 125 bytes.
  * @return #SWS_OK or #SWS_ERR_NOMEM.
  */
-sws_err sws_send_pong(sws *ws, const uint8_t *data, size_t len);
+sws_err sws_queue_pong(sws *ws, const uint8_t *data, size_t len);
 
 /**
- * @param code 0 sends an empty payload. Otherwise a wire-legal code
+ * @param code 0 queues an empty payload. Otherwise a wire-legal code
  *             (#sws_close_code_valid).
  * @param reason Ignored if @p code is 0; at most 123 UTF-8 bytes.
  * @return #SWS_OK or #SWS_ERR_NOMEM.
  */
-sws_err sws_send_close(sws *ws, uint16_t code, const uint8_t *reason, size_t reason_len);
+sws_err sws_queue_close(sws *ws, uint16_t code, const uint8_t *reason, size_t reason_len);
 
 /**
- * @return True if Close has been sent or received.
+ * @return True if Close has been queued or received.
  */
 bool sws_closing(const sws *ws);
 
 /**
- * @return True if Close has been sent and received.
+ * @return True if Close has been queued and received.
  */
 bool sws_closed(const sws *ws);
 
@@ -214,7 +214,7 @@ bool sws_closed(const sws *ws);
 sws_err sws_error(const sws *ws);
 
 /**
- * @return Close code, or 1005 until a Close is sent or received.
+ * @return Close code, or 1005 until a Close is queued or received.
  */
 uint16_t sws_last_close(const sws *ws);
 

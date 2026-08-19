@@ -758,7 +758,7 @@ const uint8_t *sws_peek(const sws *ws, size_t *len)
     return ws->out + ws->out_off;
 }
 
-void sws_consume(sws *ws, size_t n)
+void sws_mark_consumed(sws *ws, size_t n)
 {
     size_t pend;
     bug(ws != NULL);
@@ -785,11 +785,11 @@ size_t sws_write(sws *ws, uint8_t *dst, size_t cap)
         n = cap;
     }
     memcpy(dst, p, n);
-    sws_consume(ws, n);
+    sws_mark_consumed(ws, n);
     return n;
 }
 
-sws_err sws_send(sws *ws, sws_opcode opcode, const uint8_t *data, size_t len, bool fin)
+sws_err sws_queue(sws *ws, sws_opcode opcode, const uint8_t *data, size_t len, bool fin)
 {
     bug(ws != NULL);
     bug(!(len && !data));
@@ -805,27 +805,27 @@ sws_err sws_send(sws *ws, sws_opcode opcode, const uint8_t *data, size_t len, bo
     return encode_frame(ws, fin, (int)opcode, data, len);
 }
 
-sws_err sws_send_text(sws *ws, const uint8_t *data, size_t len)
+sws_err sws_queue_text(sws *ws, const uint8_t *data, size_t len)
 {
-    return sws_send(ws, SWS_OP_TEXT, data, len, true);
+    return sws_queue(ws, SWS_OP_TEXT, data, len, true);
 }
 
-sws_err sws_send_bin(sws *ws, const uint8_t *data, size_t len)
+sws_err sws_queue_bin(sws *ws, const uint8_t *data, size_t len)
 {
-    return sws_send(ws, SWS_OP_BIN, data, len, true);
+    return sws_queue(ws, SWS_OP_BIN, data, len, true);
 }
 
-sws_err sws_send_ping(sws *ws, const uint8_t *data, size_t len)
+sws_err sws_queue_ping(sws *ws, const uint8_t *data, size_t len)
 {
-    return sws_send(ws, SWS_OP_PING, data, len, true);
+    return sws_queue(ws, SWS_OP_PING, data, len, true);
 }
 
-sws_err sws_send_pong(sws *ws, const uint8_t *data, size_t len)
+sws_err sws_queue_pong(sws *ws, const uint8_t *data, size_t len)
 {
-    return sws_send(ws, SWS_OP_PONG, data, len, true);
+    return sws_queue(ws, SWS_OP_PONG, data, len, true);
 }
 
-sws_err sws_send_close(sws *ws, uint16_t code, const uint8_t *reason, size_t reason_len)
+sws_err sws_queue_close(sws *ws, uint16_t code, const uint8_t *reason, size_t reason_len)
 {
     uint8_t payload[125];
     size_t plen;

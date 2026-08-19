@@ -20,7 +20,7 @@ static sws_result pump(sws *from, sws *to)
         return r;
     }
     r = sws_feed(to, p, n);
-    sws_consume(from, n);
+    sws_mark_consumed(from, n);
     return r;
 }
 
@@ -52,13 +52,13 @@ int main(void)
         return 1;
     }
 
-    sws_send_text(cli, hi, sizeof hi - 1);
+    sws_queue_text(cli, hi, sizeof hi - 1);
     show("server", pump(cli, srv));
 
-    sws_send_text(srv, (const uint8_t *)"hi", 2);
+    sws_queue_text(srv, (const uint8_t *)"hi", 2);
     show("client", pump(srv, cli));
 
-    sws_send_close(cli, SWS_CLOSE_NORMAL, NULL, 0);
+    sws_queue_close(cli, SWS_CLOSE_NORMAL, NULL, 0);
     show("server", pump(cli, srv));
     show("client", pump(srv, cli)); /* auto-close reply */
 

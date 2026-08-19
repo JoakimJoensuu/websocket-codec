@@ -30,17 +30,17 @@ cmake -B build && cmake --build build && ctest --test-dir build
 sws *cli = sws_create(SWS_ROLE_CLIENT, 64 * 1024);
 sws *srv = sws_create(SWS_ROLE_SERVER, 64 * 1024);
 
-sws_send_text(cli, (const uint8_t *)"hello", 5);
+sws_queue_text(cli, (const uint8_t *)"hello", 5);
 
 size_t n;
 const uint8_t *p = sws_peek(cli, &n);
 sws_result in = sws_feed(srv, p, n);
-sws_consume(cli, n);
+sws_mark_consumed(cli, n);
 
 /* in.evs[0] is SWS_EV_TEXT "hello" */
 ```
 
-On a real connection, `peek`/`consume` go to `send()`, and `feed` takes bytes from `recv()`. `examples/echo_server.c` does that after the HTTP upgrade.
+On a real connection, `peek` / `mark_consumed` go to `send()`, and `feed` takes bytes from `recv()`. `examples/echo_server.c` does that after the HTTP upgrade.
 
 `max_message_size` is the inbound assembled-message cap (must be > 0).
 The library does not pick a default; `examples/echo_server.c` uses 32 MiB
