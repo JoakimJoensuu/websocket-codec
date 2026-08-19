@@ -51,6 +51,7 @@ struct sws {
     int msg_opcode;
     sws_err last_err;
     sws_utf8 utf8;
+    sws_utf8 send_utf8;
     uint16_t close_code;
     bool fin;
     bool masked;
@@ -759,6 +760,17 @@ static void check_text(const uint8_t *data, size_t len)
     bug(sws_utf8_finish(&u) == 0);
 }
 
+static sws_utf8 check_send_text(sws_utf8 u, const uint8_t *data, size_t len, bool finish)
+{
+    if (len) {
+        bug(sws_utf8_feed(&u, data, len) == 0);
+    }
+    if (finish) {
+        bug(sws_utf8_finish(&u) == 0);
+    }
+    return u;
+}
+
 sws_bytes sws_text_frame(sws *ws, const uint8_t *data, size_t len)
 {
     bug(ws != NULL);
@@ -818,6 +830,8 @@ sws_bytes sws_close_frame(sws *ws, uint16_t code, const uint8_t *reason, size_t 
 sws_bytes sws_fragment(sws *ws, sws_opcode opcode, const uint8_t *data, size_t len)
 {
     sws_bytes b;
+    sws_utf8 next;
+    bool text;
     bug(ws != NULL);
     bug(!(len && !data));
     bug(!ws->close_sent);
@@ -827,9 +841,24 @@ sws_bytes sws_fragment(sws *ws, sws_opcode opcode, const uint8_t *data, size_t l
         bug(opcode == SWS_OP_TEXT || opcode == SWS_OP_BIN);
         require_send_idle(ws);
     }
+    text = (opcode == SWS_OP_TEXT) ||
+           (opcode == SWS_OP_CONT && ws->send_opcode == SWS_OP_TEXT);
+    if (text) {
+        if (opcode == SWS_OP_TEXT) {
+            sws_utf8_init(&next);
+        } else {
+            next = ws->send_utf8;
+        }
+        next = check_send_text(next, data, len, false);
+    }
     b = encode_app(ws, false, (int)opcode, data, len);
-    if (b.p && opcode != SWS_OP_CONT) {
-        ws->send_opcode = (int)opcode;
+    if (b.p) {
+        if (opcode != SWS_OP_CONT) {
+            ws->send_opcode = (int)opcode;
+        }
+        if (text) {
+            ws->send_utf8 = next;
+        }
     }
     return b;
 }
@@ -837,12 +866,21 @@ sws_bytes sws_fragment(sws *ws, sws_opcode opcode, const uint8_t *data, size_t l
 sws_bytes sws_fragment_end(sws *ws, const uint8_t *data, size_t len)
 {
     sws_bytes b;
+    sws_utf8 next;
+    bool text;
     bug(ws != NULL);
     bug(!(len && !data));
     bug(!ws->close_sent);
     bug(ws->send_opcode == SWS_OP_TEXT || ws->send_opcode == SWS_OP_BIN);
+    text = (ws->send_opcode == SWS_OP_TEXT);
+    if (text) {
+        next = check_send_text(ws->send_utf8, data, len, true);
+    }
     b = encode_app(ws, true, SWS_OP_CONT, data, len);
     if (b.p) {
+        if (text) {
+            ws->send_utf8 = next;
+        }
         ws->send_opcode = 0;
     }
     return b;

@@ -178,7 +178,8 @@ sws_bytes sws_close_frame(sws *ws, uint16_t code, const uint8_t *reason,
  * @brief FIN=0 piece of a message.
  *
  * First piece: #SWS_OP_TEXT or #SWS_OP_BIN. Later pieces: #SWS_OP_CONT.
- * A fragment need not be valid UTF-8 by itself.
+ * A text fragment need not be valid UTF-8 by itself; illegal sequences abort.
+ * Binary is not UTF-8-checked.
  * @return Encoded bytes, or empty on OOM. Invalid after the next frame helper
  *         on @p ws.
  */
@@ -186,6 +187,8 @@ sws_bytes sws_fragment(sws *ws, sws_opcode opcode, const uint8_t *data, size_t l
 
 /**
  * @brief CONT + FIN=1; ends the message started with sws_fragment.
+ *
+ * An unfinished UTF-8 sequence on a text message aborts.
  * @return Encoded bytes, or empty on OOM. Invalid after the next frame helper
  *         on @p ws.
  */
