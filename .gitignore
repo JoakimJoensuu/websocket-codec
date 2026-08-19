@@ -5,6 +5,7 @@
 *.dylib
 *.exe
 test_sws
+hello
 echo_server
 build/
 cmake-build-*/
