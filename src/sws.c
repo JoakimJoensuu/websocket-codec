@@ -50,7 +50,6 @@ struct sws {
     sws_err last_err;
     sws_utf8 utf8;
     uint16_t close_code;
-    bool auto_close;
     bool fin;
     bool masked;
     bool close_sent;
@@ -385,9 +384,6 @@ static int on_control(sws *ws)
     ws->close_recv = true;
     if (ws->ctrl_len == 0) {
         ws->close_code = SWS_CLOSE_NO_STATUS;
-        if (ws->auto_close && !ws->close_sent) {
-            encode_frame(ws, true, SWS_OP_CLOSE, NULL, 0);
-        }
         if (ev_push(ws, SWS_EV_CLOSE, NULL, 0, SWS_CLOSE_NO_STATUS) != 0) {
             return fail(ws, SWS_ERR_NOMEM, SWS_CLOSE_INTERNAL, "oom");
         }
@@ -410,9 +406,6 @@ static int on_control(sws *ws)
             return fail(ws, SWS_ERR_UTF8, SWS_CLOSE_INVALID_DATA, "bad close reason");
         }
         ws->close_code = code;
-        if (ws->auto_close && !ws->close_sent) {
-            encode_frame(ws, true, SWS_OP_CLOSE, ws->ctrl, ws->ctrl_len);
-        }
         if (ev_push(ws, SWS_EV_CLOSE, reason, rlen, code) != 0) {
             return fail(ws, SWS_ERR_NOMEM, SWS_CLOSE_INTERNAL, "oom");
         }
@@ -652,7 +645,6 @@ void sws_config_default(sws_config *cfg)
 {
     bug(cfg != NULL);
     memset(cfg, 0, sizeof *cfg);
-    cfg->auto_close = true;
 }
 
 sws *sws_create(sws_role role, size_t max_message_size)
@@ -677,7 +669,6 @@ sws *sws_create_cfg(const sws_config *cfg)
     }
     ws->role = cfg->role;
     ws->max_message_size = cfg->max_message_size;
-    ws->auto_close = cfg->auto_close;
     ws->rng = cfg->rng;
     ws->rng_ctx = cfg->rng_ctx;
     ws->rng_state = 0xC0FFEEu ^ (uint32_t)(uintptr_t)ws;

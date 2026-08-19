@@ -288,7 +288,19 @@ static bool handle_events(sws *ws, sws_result in)
             if (sws_queue_pong(ws, in.evs[i].data, in.evs[i].len) != SWS_OK) {
                 stop = true;
             }
-        } else if (in.evs[i].kind == SWS_EV_CLOSE || in.evs[i].kind == SWS_EV_ERROR) {
+        } else if (in.evs[i].kind == SWS_EV_CLOSE) {
+            uint16_t code = in.evs[i].close_code;
+            int rc;
+            if (code == SWS_CLOSE_NO_STATUS) {
+                rc = sws_queue_close(ws, 0, NULL, 0);
+            } else {
+                rc = sws_queue_close(ws, code, in.evs[i].data, in.evs[i].len);
+            }
+            if (rc != SWS_OK) {
+                stop = true;
+            }
+            stop = true;
+        } else if (in.evs[i].kind == SWS_EV_ERROR) {
             stop = true;
         }
     }

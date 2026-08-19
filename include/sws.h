@@ -91,7 +91,6 @@ typedef struct sws_result {
 typedef struct sws_config {
     sws_role role;
     size_t max_message_size;    /**< Inbound assembled-message cap. Must be > 0. */
-    bool auto_close;
     uint32_t (*rng)(void *ctx); /**< NULL uses an internal PRNG (not a CSPRNG). */
     void *rng_ctx;
 } sws_config;
@@ -99,7 +98,7 @@ typedef struct sws_config {
 typedef struct sws sws;
 
 /**
- * @brief Set auto_close; zero the rest.
+ * @brief Zero the struct.
  *
  * Set @c role and @c max_message_size before sws_create_cfg.
  */

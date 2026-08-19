@@ -253,7 +253,9 @@ Ensure(sws, close_handshake_echoes_reason_and_empty)
     assert_that(r.evs[0].kind, is_equal_to(SWS_EV_CLOSE));
     assert_that(r.evs[0].close_code, is_equal_to(1000));
     assert_payload(&r.evs[0], SWS_EV_CLOSE, "bye", 3);
-    assert_that(sws_pending(server) > 0, is_true); /* auto close reply */
+    assert_that(sws_pending(server), is_equal_to(0));
+    assert_that(sws_queue_close(server, 1000, r.evs[0].data, r.evs[0].len),
+                is_equal_to(SWS_OK));
     r = xfer(server, client);
     assert_that(r.err, is_equal_to(SWS_OK));
     assert_that(r.n, is_equal_to(1));

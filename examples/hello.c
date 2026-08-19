@@ -60,7 +60,8 @@ int main(void)
 
     sws_queue_close(cli, SWS_CLOSE_NORMAL, NULL, 0);
     show("server", pump(cli, srv));
-    show("client", pump(srv, cli)); /* auto-close reply */
+    sws_queue_close(srv, SWS_CLOSE_NORMAL, NULL, 0);
+    show("client", pump(srv, cli));
 
     sws_destroy(cli);
     sws_destroy(srv);
