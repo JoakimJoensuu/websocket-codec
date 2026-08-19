@@ -294,11 +294,9 @@ Ensure(sws, rejects_message_over_configured_max)
     uint8_t payload[8] = {0};
     sws_result r;
 
-    memset(&cfg, 0, sizeof cfg);
+    sws_config_default(&cfg);
     cfg.role = SWS_ROLE_SERVER;
     cfg.max_message_size = 4;
-    cfg.auto_pong = true;
-    cfg.auto_close = true;
     small = sws_create_cfg(&cfg);
     assert_that(small, is_non_null);
     assert_that(sws_send_bin(client, payload, sizeof payload), is_equal_to(SWS_OK));

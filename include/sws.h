@@ -82,7 +82,6 @@ typedef struct sws_event {
     uint16_t close_code; /**< SWS_EV_CLOSE and SWS_EV_ERROR. */
 } sws_event;
 
-/** Inbound result of sws_feed. */
 typedef struct sws_result {
     sws_err err;
     const sws_event *evs;
@@ -100,56 +99,76 @@ typedef struct sws_config {
 
 typedef struct sws sws;
 
+/** auto_pong and auto_close on; remaining fields zero. */
+void sws_config_default(sws_config *cfg);
+
+/** sws_config_default() plus @p role. NULL on OOM. */
 sws *sws_create(sws_role role);
 
-/** Unlike sws_create, auto_pong / auto_close are used as given (false = off). */
+/** NULL on OOM. Does not apply sws_config_default. */
 sws *sws_create_cfg(const sws_config *cfg);
 
-/** NULL is allowed. */
+/** @p ws may be NULL. */
 void sws_destroy(sws *ws);
 
 /**
- * Parse @p src. Completed frames are copied into the returned batch.
- * Unparsed tail is kept internally. After a protocol failure a Close is
- * queued when possible; still drain output.
+ * Incomplete frames stay buffered. Each call replaces the previous batch
+ * (including @p len 0). On failure a Close is queued when possible; drain it.
  */
 sws_result sws_feed(sws *ws, const uint8_t *src, size_t len);
 
+/** Outbound bytes not yet consumed. */
 size_t sws_pending(const sws *ws);
 
+/**
+ * Pointer into the outbound buffer; empty yields NULL and *@p len == 0.
+ * Invalid after send, consume, write, or destroy.
+ */
 const uint8_t *sws_peek(const sws *ws, size_t *len);
 
+/** @p n may be less than sws_pending (partial socket write). */
 void sws_consume(sws *ws, size_t n);
 
+/** Copy min(pending, @p cap) into @p dst and consume that many. */
 size_t sws_write(sws *ws, uint8_t *dst, size_t cap);
 
-/** Text with @p fin set must be valid UTF-8. Use this for explicit fragmentation. */
-int sws_send(sws *ws, sws_opcode opcode, const uint8_t *data, size_t len, bool fin);
+/**
+ * Fragment with TEXT/BIN fin=0, CONT…, then fin=1. TEXT with fin must be
+ * valid UTF-8. Control frames must be fin and ≤125 bytes.
+ */
+sws_err sws_send(sws *ws, sws_opcode opcode, const uint8_t *data, size_t len, bool fin);
 
-int sws_send_text(sws *ws, const uint8_t *data, size_t len);
+/** One FIN frame; payload UTF-8. */
+sws_err sws_send_text(sws *ws, const uint8_t *data, size_t len);
 
-int sws_send_bin(sws *ws, const uint8_t *data, size_t len);
+/** One FIN frame; payload unchecked. */
+sws_err sws_send_bin(sws *ws, const uint8_t *data, size_t len);
 
-int sws_send_ping(sws *ws, const uint8_t *data, size_t len);
+/** ≤125 bytes. */
+sws_err sws_send_ping(sws *ws, const uint8_t *data, size_t len);
 
-int sws_send_pong(sws *ws, const uint8_t *data, size_t len);
+/** ≤125 bytes. */
+sws_err sws_send_pong(sws *ws, const uint8_t *data, size_t len);
 
 /**
- * @p code 0 sends an empty payload. Otherwise it must be allowed on the wire
- * (@ref sws_close_code_valid). @p reason is ignored if @p code is 0; at most
- * 123 bytes.
+ * @p code 0 is an empty Close. Otherwise a wire-legal code; @p reason at
+ * most 123 UTF-8 bytes and ignored when @p code is 0.
  */
-int sws_send_close(sws *ws, uint16_t code, const uint8_t *reason, size_t reason_len);
+sws_err sws_send_close(sws *ws, uint16_t code, const uint8_t *reason, size_t reason_len);
 
+/** Close sent or received. */
 bool sws_closing(const sws *ws);
 
+/** Close sent and received. */
 bool sws_closed(const sws *ws);
 
+/** Sticky after a peer or resource failure. */
 sws_err sws_error(const sws *ws);
 
+/** 1005 until a Close is sent or received. */
 uint16_t sws_last_close(const sws *ws);
 
-/** True for 1000–1014 except 1004/1005/1006, and for 3000–4999. */
+/** 1000–1014 except 1004/1005/1006, and 3000–4999. */
 bool sws_close_code_valid(uint16_t code);
 
 #ifdef __cplusplus

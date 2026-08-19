@@ -656,14 +656,20 @@ static int parse_in(sws *ws)
     return ws->last_err == SWS_OK ? SWS_OK : (int)ws->last_err;
 }
 
+void sws_config_default(sws_config *cfg)
+{
+    bug(cfg != NULL);
+    memset(cfg, 0, sizeof *cfg);
+    cfg->auto_pong = true;
+    cfg->auto_close = true;
+}
+
 sws *sws_create(sws_role role)
 {
     sws_config cfg;
     bug(role == SWS_ROLE_CLIENT || role == SWS_ROLE_SERVER);
-    memset(&cfg, 0, sizeof cfg);
+    sws_config_default(&cfg);
     cfg.role = role;
-    cfg.auto_pong = true;
-    cfg.auto_close = true;
     return sws_create_cfg(&cfg);
 }
 
@@ -782,7 +788,7 @@ size_t sws_write(sws *ws, uint8_t *dst, size_t cap)
     return n;
 }
 
-int sws_send(sws *ws, sws_opcode opcode, const uint8_t *data, size_t len, bool fin)
+sws_err sws_send(sws *ws, sws_opcode opcode, const uint8_t *data, size_t len, bool fin)
 {
     bug(ws != NULL);
     bug(!(len && !data));
@@ -798,27 +804,27 @@ int sws_send(sws *ws, sws_opcode opcode, const uint8_t *data, size_t len, bool f
     return encode_frame(ws, fin, (int)opcode, data, len);
 }
 
-int sws_send_text(sws *ws, const uint8_t *data, size_t len)
+sws_err sws_send_text(sws *ws, const uint8_t *data, size_t len)
 {
     return sws_send(ws, SWS_OP_TEXT, data, len, true);
 }
 
-int sws_send_bin(sws *ws, const uint8_t *data, size_t len)
+sws_err sws_send_bin(sws *ws, const uint8_t *data, size_t len)
 {
     return sws_send(ws, SWS_OP_BIN, data, len, true);
 }
 
-int sws_send_ping(sws *ws, const uint8_t *data, size_t len)
+sws_err sws_send_ping(sws *ws, const uint8_t *data, size_t len)
 {
     return sws_send(ws, SWS_OP_PING, data, len, true);
 }
 
-int sws_send_pong(sws *ws, const uint8_t *data, size_t len)
+sws_err sws_send_pong(sws *ws, const uint8_t *data, size_t len)
 {
     return sws_send(ws, SWS_OP_PONG, data, len, true);
 }
 
-int sws_send_close(sws *ws, uint16_t code, const uint8_t *reason, size_t reason_len)
+sws_err sws_send_close(sws *ws, uint16_t code, const uint8_t *reason, size_t reason_len)
 {
     uint8_t payload[125];
     size_t plen;

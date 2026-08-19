@@ -306,11 +306,9 @@ static void session(int fd)
         return;
     }
 
-    memset(&cfg, 0, sizeof cfg);
+    sws_config_default(&cfg);
     cfg.role = SWS_ROLE_SERVER;
     cfg.max_message_size = 32u * 1024u * 1024u;
-    cfg.auto_pong = true;
-    cfg.auto_close = true;
     ws = sws_create_cfg(&cfg);
     if (!ws) {
         return;
