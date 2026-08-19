@@ -120,11 +120,6 @@ sws *sws_create(sws_role role, size_t max_message_size);
 sws *sws_create_cfg(const sws_config *cfg);
 
 /**
- * @param ws May be NULL.
- */
-void sws_destroy(sws *ws);
-
-/**
  * @brief Parse @p src. Incomplete frames stay buffered.
  *
  * Each call replaces the previous batch, including @p len 0. On failure a
@@ -132,38 +127,6 @@ void sws_destroy(sws *ws);
  * @return @c err and any completed events from this call.
  */
 sws_result sws_feed(sws *ws, const uint8_t *src, size_t len);
-
-/**
- * @return Outbound bytes still queued.
- */
-size_t sws_pending(const sws *ws);
-
-/**
- * @brief View of the outbound buffer.
- * @param[out] len 0 if empty.
- * @return Pointer into the buffer, or NULL if empty.
- * @note Invalid after queue, mark_consumed, write, or destroy.
- */
-const uint8_t *sws_peek(const sws *ws, size_t *len);
-
-/**
- * @param n May be less than sws_pending (partial socket write).
- */
-void sws_mark_consumed(sws *ws, size_t n);
-
-/**
- * @brief Copy outbound bytes into @p dst and mark them consumed.
- * @return Bytes copied, @c min(pending, cap).
- */
-size_t sws_write(sws *ws, uint8_t *dst, size_t cap);
-
-/**
- * @brief One frame. Fragment with TEXT/BIN @p fin 0, CONT…, then @p fin 1.
- * @param opcode Control frames must be fin and ≤125 bytes.
- * @param fin TEXT with fin requires valid UTF-8.
- * @return #SWS_OK or #SWS_ERR_NOMEM.
- */
-sws_err sws_queue(sws *ws, sws_opcode opcode, const uint8_t *data, size_t len, bool fin);
 
 /**
  * @brief One FIN text frame.
@@ -199,6 +162,43 @@ sws_err sws_queue_pong(sws *ws, const uint8_t *data, size_t len);
 sws_err sws_queue_close(sws *ws, uint16_t code, const uint8_t *reason, size_t reason_len);
 
 /**
+ * @return True for 1000–1014 except 1004/1005/1006, and for 3000–4999.
+ */
+bool sws_close_code_valid(uint16_t code);
+
+/**
+ * @brief One frame. Fragment with TEXT/BIN @p fin 0, CONT…, then @p fin 1.
+ * @param opcode Control frames must be fin and ≤125 bytes.
+ * @param fin TEXT with fin requires valid UTF-8.
+ * @return #SWS_OK or #SWS_ERR_NOMEM.
+ */
+sws_err sws_queue(sws *ws, sws_opcode opcode, const uint8_t *data, size_t len, bool fin);
+
+/**
+ * @brief View of the outbound buffer.
+ * @param[out] len 0 if empty.
+ * @return Pointer into the buffer, or NULL if empty.
+ * @note Invalid after queue, mark_consumed, write, or destroy.
+ */
+const uint8_t *sws_peek(const sws *ws, size_t *len);
+
+/**
+ * @param n May be less than sws_pending (partial socket write).
+ */
+void sws_mark_consumed(sws *ws, size_t n);
+
+/**
+ * @brief Copy outbound bytes into @p dst and mark them consumed.
+ * @return Bytes copied, @c min(pending, cap).
+ */
+size_t sws_write(sws *ws, uint8_t *dst, size_t cap);
+
+/**
+ * @return Outbound bytes still queued.
+ */
+size_t sws_pending(const sws *ws);
+
+/**
  * @return True if Close has been queued or received.
  */
 bool sws_closing(const sws *ws);
@@ -219,8 +219,8 @@ sws_err sws_error(const sws *ws);
 uint16_t sws_last_close(const sws *ws);
 
 /**
- * @return True for 1000–1014 except 1004/1005/1006, and for 3000–4999.
+ * @param ws May be NULL.
  */
-bool sws_close_code_valid(uint16_t code);
+void sws_destroy(sws *ws);
 
 #endif /* SWS_H */
