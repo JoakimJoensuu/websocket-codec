@@ -2,8 +2,10 @@
 #define SWS_H
 
 /**
- * Sans-I/O WebSocket data framing (RFC 6455 §§5–7). No HTTP, TCP, or TLS.
- * After the opening handshake, feed socket bytes in and drain protocol bytes out.
+ * @brief Sans-I/O WebSocket data framing (RFC 6455 §§5–7).
+ *
+ * No HTTP, TCP, or TLS. After the opening handshake, feed socket bytes in
+ * and drain protocol bytes out.
  */
 
 #include <stdbool.h>
@@ -14,15 +16,15 @@
 #define SWS_VERSION_MINOR 1
 #define SWS_VERSION_PATCH 0
 
-/** Clients mask every outgoing frame; servers must not (RFC 6455 §5.3). */
+/** @brief Clients mask every outgoing frame; servers must not (RFC 6455 §5.3). */
 typedef enum {
     SWS_ROLE_CLIENT = 0,
     SWS_ROLE_SERVER = 1
 } sws_role;
 
 /**
- * Programming errors abort; there is no invalid-argument code.
- * Negative values are peer or resource failures.
+ * @brief Peer or resource failures. Programming errors abort; there is no
+ *        invalid-argument code.
  */
 typedef enum {
     SWS_OK = 0,
@@ -42,7 +44,7 @@ typedef enum {
     SWS_OP_PONG = 0xA
 } sws_opcode;
 
-/** 1005/1006/1015 are never sent on the wire. */
+/** @brief 1005/1006/1015 are never sent on the wire. */
 typedef enum {
     SWS_CLOSE_NORMAL = 1000,
     SWS_CLOSE_GOING_AWAY = 1001,
@@ -68,7 +70,9 @@ typedef enum {
 } sws_event_kind;
 
 /**
- * Payload bytes are copied. A sws_result batch is valid until the next
+ * @brief One completed inbound frame.
+ *
+ * Payload bytes are copied. A @c sws_result batch is valid until the next
  * sws_feed or sws_destroy; send does not invalidate it.
  */
 typedef struct sws_event {
@@ -95,76 +99,128 @@ typedef struct sws_config {
 
 typedef struct sws sws;
 
-/** auto_pong and auto_close on. Set role and max_message_size before create_cfg. */
+/**
+ * @brief Set auto_pong and auto_close; zero the rest.
+ *
+ * Set @c role and @c max_message_size before sws_create_cfg.
+ */
 void sws_config_default(sws_config *cfg);
 
-/** sws_config_default() plus @p role and @p max_message_size. NULL on OOM. */
+/**
+ * @brief sws_config_default() plus @p role and @p max_message_size.
+ * @param max_message_size Inbound assembled-message cap; must be > 0.
+ * @return Heap session, or NULL on OOM.
+ */
 sws *sws_create(sws_role role, size_t max_message_size);
 
-/** NULL on OOM. Does not apply sws_config_default. */
+/**
+ * @brief Create from @p cfg as given; does not apply sws_config_default.
+ * @return Heap session, or NULL on OOM.
+ */
 sws *sws_create_cfg(const sws_config *cfg);
 
-/** @p ws may be NULL. */
+/**
+ * @param ws May be NULL.
+ */
 void sws_destroy(sws *ws);
 
 /**
- * Incomplete frames stay buffered. Each call replaces the previous batch
- * (including @p len 0). On failure a Close is queued when possible; drain it.
+ * @brief Parse @p src. Incomplete frames stay buffered.
+ *
+ * Each call replaces the previous batch, including @p len 0. On failure a
+ * Close is queued when possible; drain it.
+ * @return @c err and any completed events from this call.
  */
 sws_result sws_feed(sws *ws, const uint8_t *src, size_t len);
 
-/** Outbound bytes not yet consumed. */
+/**
+ * @return Outbound bytes not yet consumed.
+ */
 size_t sws_pending(const sws *ws);
 
 /**
- * Pointer into the outbound buffer; empty yields NULL and *@p len == 0.
- * Invalid after send, consume, write, or destroy.
+ * @brief View of the outbound buffer.
+ * @param[out] len 0 if empty.
+ * @return Pointer into the buffer, or NULL if empty.
+ * @note Invalid after send, consume, write, or destroy.
  */
 const uint8_t *sws_peek(const sws *ws, size_t *len);
 
-/** @p n may be less than sws_pending (partial socket write). */
+/**
+ * @param n May be less than sws_pending (partial socket write).
+ */
 void sws_consume(sws *ws, size_t n);
 
-/** Copy min(pending, @p cap) into @p dst and consume that many. */
+/**
+ * @brief Copy outbound bytes into @p dst and consume them.
+ * @return Bytes copied, @c min(pending, cap).
+ */
 size_t sws_write(sws *ws, uint8_t *dst, size_t cap);
 
 /**
- * Fragment with TEXT/BIN fin=0, CONT…, then fin=1. TEXT with fin must be
- * valid UTF-8. Control frames must be fin and ≤125 bytes.
+ * @brief Queue one frame. Fragment with TEXT/BIN @p fin 0, CONT…, then @p fin 1.
+ * @param opcode Control frames must be fin and ≤125 bytes.
+ * @param fin TEXT with fin requires valid UTF-8.
+ * @return #SWS_OK or #SWS_ERR_NOMEM.
  */
 sws_err sws_send(sws *ws, sws_opcode opcode, const uint8_t *data, size_t len, bool fin);
 
-/** One FIN frame; payload UTF-8. */
+/**
+ * @brief One FIN text frame.
+ * @param data Valid UTF-8.
+ * @return #SWS_OK or #SWS_ERR_NOMEM.
+ */
 sws_err sws_send_text(sws *ws, const uint8_t *data, size_t len);
 
-/** One FIN frame; payload unchecked. */
+/**
+ * @brief One FIN binary frame; payload is not UTF-8-checked.
+ * @return #SWS_OK or #SWS_ERR_NOMEM.
+ */
 sws_err sws_send_bin(sws *ws, const uint8_t *data, size_t len);
 
-/** ≤125 bytes. */
+/**
+ * @param data At most 125 bytes.
+ * @return #SWS_OK or #SWS_ERR_NOMEM.
+ */
 sws_err sws_send_ping(sws *ws, const uint8_t *data, size_t len);
 
-/** ≤125 bytes. */
+/**
+ * @param data At most 125 bytes.
+ * @return #SWS_OK or #SWS_ERR_NOMEM.
+ */
 sws_err sws_send_pong(sws *ws, const uint8_t *data, size_t len);
 
 /**
- * @p code 0 is an empty Close. Otherwise a wire-legal code; @p reason at
- * most 123 UTF-8 bytes and ignored when @p code is 0.
+ * @param code 0 sends an empty payload. Otherwise a wire-legal code
+ *             (#sws_close_code_valid).
+ * @param reason Ignored if @p code is 0; at most 123 UTF-8 bytes.
+ * @return #SWS_OK or #SWS_ERR_NOMEM.
  */
 sws_err sws_send_close(sws *ws, uint16_t code, const uint8_t *reason, size_t reason_len);
 
-/** Close sent or received. */
+/**
+ * @return True if Close has been sent or received.
+ */
 bool sws_closing(const sws *ws);
 
-/** Close sent and received. */
+/**
+ * @return True if Close has been sent and received.
+ */
 bool sws_closed(const sws *ws);
 
-/** Sticky after a peer or resource failure. */
+/**
+ * @return Last peer or resource failure, sticky; #SWS_OK otherwise.
+ */
 sws_err sws_error(const sws *ws);
 
-/** 1005 until a Close is sent or received. */
+/**
+ * @return Close code, or 1005 until a Close is sent or received.
+ */
 uint16_t sws_last_close(const sws *ws);
 
-/** 1000–1014 except 1004/1005/1006, and 3000–4999. */
+/**
+ * @return True for 1000–1014 except 1004/1005/1006, and for 3000–4999.
+ */
 bool sws_close_code_valid(uint16_t code);
 
 #endif /* SWS_H */
