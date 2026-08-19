@@ -248,16 +248,10 @@ static int handshake(int fd, uint8_t *leftover, size_t *nleft, size_t cap)
     return -1;
 }
 
-static int flush_ws(int fd, sws *ws)
+static int send_all(int fd, const uint8_t *p, size_t n)
 {
-    for (;;) {
-        size_t n;
-        const uint8_t *p = sws_peek(ws, &n);
-        ssize_t w;
-        if (!n) {
-            return 0;
-        }
-        w = send(fd, p, n, 0);
+    while (n) {
+        ssize_t w = send(fd, p, n, 0);
         if (w < 0) {
             if (errno == EINTR) {
                 continue;
@@ -267,40 +261,39 @@ static int flush_ws(int fd, sws *ws)
         if (w == 0) {
             return -1;
         }
-        sws_mark_consumed(ws, (size_t)w);
+        p += (size_t)w;
+        n -= (size_t)w;
     }
+    return 0;
 }
 
-static bool handle_events(sws *ws, sws_result in)
+static int send_bytes(int fd, sws_bytes b)
+{
+    if (!b.n) {
+        return 0;
+    }
+    return send_all(fd, b.p, b.n);
+}
+
+static bool handle_events(int fd, sws *ws, sws_result in)
 {
     size_t i;
     bool stop = false;
     for (i = 0; i < in.n; i++) {
+        sws_bytes b;
+        b.p = NULL;
+        b.n = 0;
         if (in.evs[i].kind == SWS_EV_TEXT) {
-            if (sws_queue_text(ws, in.evs[i].data, in.evs[i].len) != SWS_OK) {
+            b = sws_text_frame(ws, in.evs[i].data, in.evs[i].len);
+            if (!b.p || send_bytes(fd, b) != 0) {
                 stop = true;
             }
         } else if (in.evs[i].kind == SWS_EV_BIN) {
-            if (sws_queue_bin(ws, in.evs[i].data, in.evs[i].len) != SWS_OK) {
+            b = sws_bin_frame(ws, in.evs[i].data, in.evs[i].len);
+            if (!b.p || send_bytes(fd, b) != 0) {
                 stop = true;
             }
-        } else if (in.evs[i].kind == SWS_EV_PING) {
-            if (sws_queue_pong(ws, in.evs[i].data, in.evs[i].len) != SWS_OK) {
-                stop = true;
-            }
-        } else if (in.evs[i].kind == SWS_EV_CLOSE) {
-            uint16_t code = in.evs[i].close_code;
-            int rc;
-            if (code == SWS_CLOSE_NO_STATUS) {
-                rc = sws_queue_close(ws, 0, NULL, 0);
-            } else {
-                rc = sws_queue_close(ws, code, in.evs[i].data, in.evs[i].len);
-            }
-            if (rc != SWS_OK) {
-                stop = true;
-            }
-            stop = true;
-        } else if (in.evs[i].kind == SWS_EV_ERROR) {
+        } else if (in.evs[i].kind == SWS_EV_CLOSE || in.evs[i].kind == SWS_EV_ERROR) {
             stop = true;
         }
     }
@@ -328,34 +321,35 @@ static void session(int fd)
 
     if (nleft) {
         sws_result in = sws_feed(ws, leftover, nleft);
-        if (in.err != SWS_OK) {
-            flush_ws(fd, ws);
+        if (send_bytes(fd, in.out) != 0) {
             sws_destroy(ws);
             return;
         }
-        stop = handle_events(ws, in);
+        if (in.err != SWS_OK) {
+            sws_destroy(ws);
+            return;
+        }
+        stop = handle_events(fd, ws, in);
     }
 
     for (;;) {
-        if (flush_ws(fd, ws) != 0) {
-            break;
-        }
+        ssize_t r;
+        sws_result in;
         if (stop || sws_closing(ws)) {
             break;
         }
-        {
-            ssize_t r = recv(fd, buf, sizeof buf, 0);
-            sws_result in;
-            if (r <= 0) {
-                break;
-            }
-            in = sws_feed(ws, buf, (size_t)r);
-            if (in.err != SWS_OK) {
-                flush_ws(fd, ws);
-                break;
-            }
-            stop = handle_events(ws, in);
+        r = recv(fd, buf, sizeof buf, 0);
+        if (r <= 0) {
+            break;
         }
+        in = sws_feed(ws, buf, (size_t)r);
+        if (send_bytes(fd, in.out) != 0) {
+            break;
+        }
+        if (in.err != SWS_OK) {
+            break;
+        }
+        stop = handle_events(fd, ws, in);
     }
     sws_destroy(ws);
 }

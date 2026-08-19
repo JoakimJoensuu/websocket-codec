@@ -5,7 +5,7 @@
  * @brief Sans-I/O WebSocket data framing (RFC 6455 §§5–7).
  *
  * No HTTP, TCP, or TLS. After the opening handshake, feed socket bytes in
- * and drain protocol bytes out.
+ * and send the returned frames out.
  */
 
 #include <stdbool.h>
@@ -65,14 +65,25 @@ typedef enum {
     SWS_EV_PING,
     SWS_EV_PONG,
     SWS_EV_CLOSE,
-    SWS_EV_ERROR /**< A Close frame is usually queued. */
+    SWS_EV_ERROR /**< A Close frame is usually in sws_result.out. */
 } sws_event_kind;
 
 /**
- * @brief One completed inbound frame.
+ * @brief Encoded wire bytes.
  *
- * Payload bytes are copied. A @c sws_result batch is valid until the next
- * sws_feed or sws_destroy; sws_queue_* does not invalidate it.
+ * @c p is NULL and @c n is 0 when there is nothing to send, or when a frame
+ * helper fails (OOM). A successful frame is never empty: it includes a header.
+ */
+typedef struct sws_bytes {
+    const uint8_t *p;
+    size_t n;
+} sws_bytes;
+
+/**
+ * @brief One completed inbound message or control frame.
+ *
+ * Payload bytes are copied. A @c sws_result batch (events and @c out) is valid
+ * until the next sws_feed or sws_destroy. Frame helpers do not invalidate it.
  */
 typedef struct sws_event {
     sws_event_kind kind;
@@ -85,6 +96,7 @@ typedef struct sws_result {
     sws_err err;
     const sws_event *evs;
     size_t n;
+    sws_bytes out; /**< Pong, Close echo, and fail Close from this parse. */
 } sws_result;
 
 typedef struct sws_config {
@@ -114,44 +126,70 @@ sws *sws_create_cfg(const sws_config *cfg);
 /**
  * @brief Parse @p src. Incomplete frames stay buffered.
  *
- * Each call replaces the previous batch, including @p len 0. On failure a
- * Close is queued when possible; drain it.
- * @return @c err and any completed events from this call.
+ * Each call replaces the previous batch, including @p len 0. Ping is answered
+ * with Pong, and an inbound Close is echoed, unless a Close was already sent.
+ * On failure a Close is encoded when possible. Send @c out before the next
+ * sws_feed.
+ * @return @c err, completed events, and any reply frames from this call.
  */
 sws_result sws_feed(sws *ws, const uint8_t *src, size_t len);
 
 /**
- * @brief One FIN text frame.
- * @param data Valid UTF-8.
- * @return #SWS_OK or #SWS_ERR_NOMEM.
+ * @brief One FIN text frame. @p data must be valid UTF-8.
+ * @return Encoded bytes, or empty on OOM. Invalid after the next frame helper
+ *         on @p ws.
  */
-sws_err sws_queue_text(sws *ws, const uint8_t *data, size_t len);
+sws_bytes sws_text_frame(sws *ws, const uint8_t *data, size_t len);
 
 /**
  * @brief One FIN binary frame; payload is not UTF-8-checked.
- * @return #SWS_OK or #SWS_ERR_NOMEM.
+ * @return Encoded bytes, or empty on OOM. Invalid after the next frame helper
+ *         on @p ws.
  */
-sws_err sws_queue_bin(sws *ws, const uint8_t *data, size_t len);
+sws_bytes sws_bin_frame(sws *ws, const uint8_t *data, size_t len);
 
 /**
- * @param data At most 125 bytes.
- * @return #SWS_OK or #SWS_ERR_NOMEM.
+ * @param data At most 125 bytes. Allowed between fragments.
+ * @return Encoded bytes, or empty on OOM. Invalid after the next frame helper
+ *         on @p ws.
  */
-sws_err sws_queue_ping(sws *ws, const uint8_t *data, size_t len);
+sws_bytes sws_ping_frame(sws *ws, const uint8_t *data, size_t len);
 
 /**
- * @param data At most 125 bytes.
- * @return #SWS_OK or #SWS_ERR_NOMEM.
+ * @brief Unsolicited Pong. Inbound Ping is already answered in sws_feed @c out.
+ * @param data At most 125 bytes. Allowed between fragments.
+ * @return Encoded bytes, or empty on OOM. Invalid after the next frame helper
+ *         on @p ws.
  */
-sws_err sws_queue_pong(sws *ws, const uint8_t *data, size_t len);
+sws_bytes sws_pong_frame(sws *ws, const uint8_t *data, size_t len);
 
 /**
- * @param code 0 queues an empty payload. Otherwise a wire-legal code
+ * @brief Initiate Close. Inbound Close is already echoed in sws_feed @c out.
+ * @param code 0 encodes an empty payload. Otherwise a wire-legal code
  *             (#sws_close_code_valid).
  * @param reason Ignored if @p code is 0; at most 123 UTF-8 bytes.
- * @return #SWS_OK or #SWS_ERR_NOMEM.
+ * @return Encoded bytes, or empty on OOM. Invalid after the next frame helper
+ *         on @p ws.
  */
-sws_err sws_queue_close(sws *ws, uint16_t code, const uint8_t *reason, size_t reason_len);
+sws_bytes sws_close_frame(sws *ws, uint16_t code, const uint8_t *reason,
+                          size_t reason_len);
+
+/**
+ * @brief FIN=0 piece of a message.
+ *
+ * First piece: #SWS_OP_TEXT or #SWS_OP_BIN. Later pieces: #SWS_OP_CONT.
+ * A fragment need not be valid UTF-8 by itself.
+ * @return Encoded bytes, or empty on OOM. Invalid after the next frame helper
+ *         on @p ws.
+ */
+sws_bytes sws_fragment(sws *ws, sws_opcode opcode, const uint8_t *data, size_t len);
+
+/**
+ * @brief CONT + FIN=1; ends the message started with sws_fragment.
+ * @return Encoded bytes, or empty on OOM. Invalid after the next frame helper
+ *         on @p ws.
+ */
+sws_bytes sws_fragment_end(sws *ws, const uint8_t *data, size_t len);
 
 /**
  * @return True for 1000–1014 except 1004/1005/1006, and for 3000–4999.
@@ -159,44 +197,12 @@ sws_err sws_queue_close(sws *ws, uint16_t code, const uint8_t *reason, size_t re
 bool sws_close_code_valid(uint16_t code);
 
 /**
- * @brief One frame. Fragment with TEXT/BIN @p fin 0, CONT…, then @p fin 1.
- * @param opcode Control frames must be fin and ≤125 bytes.
- * @param fin TEXT with fin requires valid UTF-8.
- * @return #SWS_OK or #SWS_ERR_NOMEM.
- */
-sws_err sws_queue(sws *ws, sws_opcode opcode, const uint8_t *data, size_t len, bool fin);
-
-/**
- * @brief View of the outbound buffer.
- * @param[out] len 0 if empty.
- * @return Pointer into the buffer, or NULL if empty.
- * @note Invalid after queue, mark_consumed, write, or destroy.
- */
-const uint8_t *sws_peek(const sws *ws, size_t *len);
-
-/**
- * @param n May be less than sws_pending (partial socket write).
- */
-void sws_mark_consumed(sws *ws, size_t n);
-
-/**
- * @brief Copy outbound bytes into @p dst and mark them consumed.
- * @return Bytes copied, @c min(pending, cap).
- */
-size_t sws_write(sws *ws, uint8_t *dst, size_t cap);
-
-/**
- * @return Outbound bytes still queued.
- */
-size_t sws_pending(const sws *ws);
-
-/**
- * @return True if Close has been queued or received.
+ * @return True if Close has been sent or received.
  */
 bool sws_closing(const sws *ws);
 
 /**
- * @return True if Close has been queued and received.
+ * @return True if Close has been sent and received.
  */
 bool sws_closed(const sws *ws);
 
@@ -206,7 +212,7 @@ bool sws_closed(const sws *ws);
 sws_err sws_error(const sws *ws);
 
 /**
- * @return Close code, or 1005 until a Close is queued or received.
+ * @return Close code, or 1005 until a Close is sent or received.
  */
 uint16_t sws_last_close(const sws *ws);
 

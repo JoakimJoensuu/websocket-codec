@@ -7,7 +7,7 @@ checks on text.
 
 It does **not** implement HTTP, TCP, TLS, or the opening handshake (section 4).
 You own those. After `101 Switching Protocols`, feed bytes from the socket and
-drain bytes back to it.
+send the returned frames back.
 
 ```
   application  <-->  sws (frames / events)  <-->  your I/O
@@ -22,7 +22,7 @@ cmake -B build && cmake --build build && ctest --test-dir build
 
 ## API sketch
 
-`examples/hello.c` is two sessions in one process (no sockets). Peek bytes from one, feed them to the other:
+`examples/hello.c` is two sessions in one process (no sockets). Encode a frame, feed those bytes to the peer:
 
 ```c
 #include "sws.h"
@@ -30,17 +30,16 @@ cmake -B build && cmake --build build && ctest --test-dir build
 sws *cli = sws_create(SWS_ROLE_CLIENT);
 sws *srv = sws_create(SWS_ROLE_SERVER);
 
-sws_queue_text(cli, (const uint8_t *)"hello", 5);
-
-size_t n;
-const uint8_t *p = sws_peek(cli, &n);
-sws_result in = sws_feed(srv, p, n);
-sws_mark_consumed(cli, n);
+sws_bytes b = sws_text_frame(cli, (const uint8_t *)"hello", 5);
+sws_result in = sws_feed(srv, b.p, b.n);
 
 /* in.evs[0] is SWS_EV_TEXT "hello" */
+/* in.out is Pong / Close echo / fail Close from this parse, if any */
 ```
 
-On a real connection, `peek` / `mark_consumed` go to `send()`, and `feed` takes bytes from `recv()`. `examples/echo_server.c` does that after the HTTP upgrade.
+On a real connection, `send()` the frame bytes and `in.out`; `feed` takes bytes from `recv()`. `examples/echo_server.c` does that after the HTTP upgrade.
+
+A later `sws_*_frame` / `sws_fragment*` on the same session invalidates the previous helper’s `sws_bytes`. Copy if you need to hold them. `sws_feed`’s events and `out` stay valid until the next `sws_feed`.
 
 Clients mask every outgoing frame (RFC 6455 §5.3). The default PRNG is
 **not** a CSPRNG; set `sws_config.rng` if you need unpredictable masks.
@@ -54,7 +53,7 @@ Servers never mask.
 | Client masking / server unmasking | HTTP/1.1 upgrade, `Sec-WebSocket-Key` |
 | Continuation / interleaved control frames | URL routing, subprotocols |
 | Close codes and UTF-8 (incl. split code points) | `permessage-deflate` (RFC 7692) |
-| Close on protocol error | Pong and close handshake replies |
+| Fail Close, Pong for Ping, Close echo | Unsolicited Ping / Pong, initiating Close |
 
 Autobahn cases 12.* and 13.* (compression) are excluded for that reason.
 

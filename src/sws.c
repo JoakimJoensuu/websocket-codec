@@ -33,10 +33,12 @@ struct sws {
     uint8_t *in;
     size_t in_len;
     size_t in_cap;
-    uint8_t *out;
-    size_t out_len;
-    size_t out_off;
-    size_t out_cap;
+    uint8_t *reply;
+    size_t reply_len;
+    size_t reply_cap;
+    uint8_t *enc;
+    size_t enc_len;
+    size_t enc_cap;
     sws_event *evs;
     size_t ev_n;
     size_t ev_cap;
@@ -44,6 +46,7 @@ struct sws {
     uint32_t rng_state;
     parse_st st;
     int opcode;
+    int send_opcode;
     unsigned mask_off;
     int msg_opcode;
     sws_err last_err;
@@ -159,30 +162,6 @@ static void in_consume(sws *ws, size_t n)
     ws->in_len -= n;
 }
 
-static void out_compact(sws *ws)
-{
-    if (ws->out_off == 0) {
-        return;
-    }
-    if (ws->out_off >= ws->out_len) {
-        ws->out_len = 0;
-        ws->out_off = 0;
-        return;
-    }
-    memmove(ws->out, ws->out + ws->out_off, ws->out_len - ws->out_off);
-    ws->out_len -= ws->out_off;
-    ws->out_off = 0;
-}
-
-static int out_reserve(sws *ws, size_t extra)
-{
-    size_t used = ws->out_len - ws->out_off;
-    if (ws->out_off > 0 && (ws->out_off > 4096 || ws->out_off > used)) {
-        out_compact(ws);
-    }
-    return buf_reserve(&ws->out, &ws->out_cap, ws->out_len + extra);
-}
-
 static void clear_events(sws *ws)
 {
     size_t i;
@@ -252,16 +231,18 @@ static void apply_mask(uint8_t *p, size_t n, const uint8_t key[4])
     }
 }
 
-static int encode_frame(sws *ws, bool fin, int opcode, const uint8_t *data, size_t len)
+static int encode_frame(sws *ws, bool fin, int opcode, const uint8_t *data, size_t len,
+                        uint8_t **buf, size_t *blen, size_t *bcap, bool append)
 {
     uint8_t hdr[14];
     size_t hlen = 2;
     bool mask = (ws->role == SWS_ROLE_CLIENT);
     uint8_t key[4];
     size_t total;
+    size_t off;
 
     bug(ws != NULL);
-    bug(!ws->close_sent);
+    bug(opcode == SWS_OP_PONG || !ws->close_sent);
     bug(is_known_opcode(opcode));
     bug(!is_control(opcode) || (fin && len <= SWS_CTRL_MAX));
     bug(!(len && !data));
@@ -286,21 +267,52 @@ static int encode_frame(sws *ws, bool fin, int opcode, const uint8_t *data, size
     }
 
     total = hlen + len;
-    if (out_reserve(ws, total) != 0) {
+    off = append ? *blen : 0;
+    if (buf_reserve(buf, bcap, off + total) != 0) {
         return SWS_ERR_NOMEM;
     }
-    memcpy(ws->out + ws->out_len, hdr, hlen);
+    if (!append) {
+        *blen = 0;
+        off = 0;
+    }
+    memcpy(*buf + off, hdr, hlen);
     if (len) {
-        memcpy(ws->out + ws->out_len + hlen, data, len);
+        memcpy(*buf + off + hlen, data, len);
         if (mask) {
-            apply_mask(ws->out + ws->out_len + hlen, len, key);
+            apply_mask(*buf + off + hlen, len, key);
         }
     }
-    ws->out_len += total;
+    *blen = off + total;
     if (opcode == SWS_OP_CLOSE) {
         ws->close_sent = true;
     }
     return SWS_OK;
+}
+
+static int reply_frame(sws *ws, bool fin, int opcode, const uint8_t *data, size_t len)
+{
+    return encode_frame(ws, fin, opcode, data, len, &ws->reply, &ws->reply_len,
+                        &ws->reply_cap, true);
+}
+
+static sws_bytes enc_bytes(const sws *ws, int rc)
+{
+    sws_bytes b;
+    if (rc != SWS_OK || ws->enc_len == 0) {
+        b.p = NULL;
+        b.n = 0;
+        return b;
+    }
+    b.p = ws->enc;
+    b.n = ws->enc_len;
+    return b;
+}
+
+static sws_bytes encode_app(sws *ws, bool fin, int opcode, const uint8_t *data, size_t len)
+{
+    int rc = encode_frame(ws, fin, opcode, data, len, &ws->enc, &ws->enc_len,
+                          &ws->enc_cap, false);
+    return enc_bytes(ws, rc);
 }
 
 static int fail(sws *ws, sws_err err, uint16_t code, const char *reason)
@@ -326,7 +338,8 @@ static int fail(sws *ws, sws_err err, uint16_t code, const char *reason)
             memcpy(payload + 2, reason, rlen);
             plen = 2 + rlen;
         }
-        encode_frame(ws, true, SWS_OP_CLOSE, payload, plen);
+        encode_frame(ws, true, SWS_OP_CLOSE, payload, plen, &ws->reply, &ws->reply_len,
+                     &ws->reply_cap, true);
     }
     ev_push(ws, SWS_EV_ERROR, (const uint8_t *)reason, rlen, code);
     return err;
@@ -368,6 +381,9 @@ static int finish_message(sws *ws)
 static int on_control(sws *ws)
 {
     if (ws->opcode == SWS_OP_PING) {
+        if (reply_frame(ws, true, SWS_OP_PONG, ws->ctrl, ws->ctrl_len) != SWS_OK) {
+            return fail(ws, SWS_ERR_NOMEM, SWS_CLOSE_INTERNAL, "oom");
+        }
         if (ev_push(ws, SWS_EV_PING, ws->ctrl, ws->ctrl_len, 0) != 0) {
             return fail(ws, SWS_ERR_NOMEM, SWS_CLOSE_INTERNAL, "oom");
         }
@@ -383,6 +399,11 @@ static int on_control(sws *ws)
     ws->close_recv = true;
     if (ws->ctrl_len == 0) {
         ws->close_code = SWS_CLOSE_NO_STATUS;
+        if (!ws->close_sent) {
+            if (reply_frame(ws, true, SWS_OP_CLOSE, NULL, 0) != SWS_OK) {
+                return fail(ws, SWS_ERR_NOMEM, SWS_CLOSE_INTERNAL, "oom");
+            }
+        }
         if (ev_push(ws, SWS_EV_CLOSE, NULL, 0, SWS_CLOSE_NO_STATUS) != 0) {
             return fail(ws, SWS_ERR_NOMEM, SWS_CLOSE_INTERNAL, "oom");
         }
@@ -405,6 +426,11 @@ static int on_control(sws *ws)
             return fail(ws, SWS_ERR_UTF8, SWS_CLOSE_INVALID_DATA, "bad close reason");
         }
         ws->close_code = code;
+        if (!ws->close_sent) {
+            if (reply_frame(ws, true, SWS_OP_CLOSE, ws->ctrl, ws->ctrl_len) != SWS_OK) {
+                return fail(ws, SWS_ERR_NOMEM, SWS_CLOSE_INTERNAL, "oom");
+            }
+        }
         if (ev_push(ws, SWS_EV_CLOSE, reason, rlen, code) != 0) {
             return fail(ws, SWS_ERR_NOMEM, SWS_CLOSE_INTERNAL, "oom");
         }
@@ -683,7 +709,8 @@ void sws_destroy(sws *ws)
     free(ws->evs);
     free(ws->msg);
     free(ws->in);
-    free(ws->out);
+    free(ws->reply);
+    free(ws->enc);
     free(ws);
 }
 
@@ -693,6 +720,8 @@ static sws_result make_result(sws *ws, sws_err err)
     r.err = err;
     r.evs = ws->ev_n ? ws->evs : NULL;
     r.n = ws->ev_n;
+    r.out.p = ws->reply_len ? ws->reply : NULL;
+    r.out.n = ws->reply_len;
     return r;
 }
 
@@ -701,6 +730,7 @@ sws_result sws_feed(sws *ws, const uint8_t *src, size_t len)
     bug(ws != NULL);
     bug(!(len && !src));
     clear_events(ws);
+    ws->reply_len = 0;
     if (ws->st == ST_DEAD) {
         return make_result(ws, ws->last_err ? ws->last_err : SWS_ERR_CLOSED);
     }
@@ -714,96 +744,56 @@ sws_result sws_feed(sws *ws, const uint8_t *src, size_t len)
     return make_result(ws, (sws_err)parse_in(ws));
 }
 
-size_t sws_pending(const sws *ws)
+static void require_send_idle(const sws *ws)
 {
-    bug(ws != NULL);
-    if (ws->out_len <= ws->out_off) {
-        return 0;
-    }
-    return ws->out_len - ws->out_off;
+    bug(ws->send_opcode == 0);
 }
 
-const uint8_t *sws_peek(const sws *ws, size_t *len)
+static void check_text(const uint8_t *data, size_t len)
 {
-    size_t n;
-    bug(ws != NULL);
-    bug(len != NULL);
-    n = sws_pending(ws);
-    *len = n;
-    if (n == 0) {
-        return NULL;
+    sws_utf8 u;
+    sws_utf8_init(&u);
+    if (len) {
+        bug(sws_utf8_feed(&u, data, len) == 0);
     }
-    return ws->out + ws->out_off;
+    bug(sws_utf8_finish(&u) == 0);
 }
 
-void sws_mark_consumed(sws *ws, size_t n)
-{
-    size_t pend;
-    bug(ws != NULL);
-    pend = sws_pending(ws);
-    bug(n <= pend);
-    ws->out_off += n;
-    if (ws->out_off >= ws->out_len) {
-        ws->out_off = 0;
-        ws->out_len = 0;
-    }
-}
-
-size_t sws_write(sws *ws, uint8_t *dst, size_t cap)
-{
-    size_t n;
-    const uint8_t *p;
-    bug(ws != NULL);
-    bug(cap == 0 || dst != NULL);
-    p = sws_peek(ws, &n);
-    if (!p) {
-        return 0;
-    }
-    if (n > cap) {
-        n = cap;
-    }
-    memcpy(dst, p, n);
-    sws_mark_consumed(ws, n);
-    return n;
-}
-
-sws_err sws_queue(sws *ws, sws_opcode opcode, const uint8_t *data, size_t len, bool fin)
+sws_bytes sws_text_frame(sws *ws, const uint8_t *data, size_t len)
 {
     bug(ws != NULL);
     bug(!(len && !data));
     bug(!ws->close_sent);
-    if (opcode == SWS_OP_TEXT && fin) {
-        sws_utf8 u;
-        sws_utf8_init(&u);
-        if (len) {
-            bug(sws_utf8_feed(&u, data, len) == 0);
-        }
-        bug(sws_utf8_finish(&u) == 0);
-    }
-    return encode_frame(ws, fin, (int)opcode, data, len);
+    require_send_idle(ws);
+    check_text(data, len);
+    return encode_app(ws, true, SWS_OP_TEXT, data, len);
 }
 
-sws_err sws_queue_text(sws *ws, const uint8_t *data, size_t len)
+sws_bytes sws_bin_frame(sws *ws, const uint8_t *data, size_t len)
 {
-    return sws_queue(ws, SWS_OP_TEXT, data, len, true);
+    bug(ws != NULL);
+    bug(!(len && !data));
+    bug(!ws->close_sent);
+    require_send_idle(ws);
+    return encode_app(ws, true, SWS_OP_BIN, data, len);
 }
 
-sws_err sws_queue_bin(sws *ws, const uint8_t *data, size_t len)
+sws_bytes sws_ping_frame(sws *ws, const uint8_t *data, size_t len)
 {
-    return sws_queue(ws, SWS_OP_BIN, data, len, true);
+    bug(ws != NULL);
+    bug(!(len && !data));
+    bug(!ws->close_sent);
+    return encode_app(ws, true, SWS_OP_PING, data, len);
 }
 
-sws_err sws_queue_ping(sws *ws, const uint8_t *data, size_t len)
+sws_bytes sws_pong_frame(sws *ws, const uint8_t *data, size_t len)
 {
-    return sws_queue(ws, SWS_OP_PING, data, len, true);
+    bug(ws != NULL);
+    bug(!(len && !data));
+    return encode_app(ws, true, SWS_OP_PONG, data, len);
 }
 
-sws_err sws_queue_pong(sws *ws, const uint8_t *data, size_t len)
-{
-    return sws_queue(ws, SWS_OP_PONG, data, len, true);
-}
-
-sws_err sws_queue_close(sws *ws, uint16_t code, const uint8_t *reason, size_t reason_len)
+sws_bytes sws_close_frame(sws *ws, uint16_t code, const uint8_t *reason, size_t reason_len)
 {
     uint8_t payload[125];
     size_t plen;
@@ -811,20 +801,51 @@ sws_err sws_queue_close(sws *ws, uint16_t code, const uint8_t *reason, size_t re
     bug(!ws->close_sent);
     if (code == 0) {
         bug(reason_len == 0);
-        return encode_frame(ws, true, SWS_OP_CLOSE, NULL, 0);
+        return encode_app(ws, true, SWS_OP_CLOSE, NULL, 0);
     }
     bug(sws_close_code_valid(code));
     bug(reason_len <= 123);
     wr16(payload, code);
     plen = 2;
     if (reason_len) {
-        sws_utf8 u;
-        sws_utf8_init(&u);
-        bug(sws_utf8_feed(&u, reason, reason_len) == 0 && sws_utf8_finish(&u) == 0);
+        check_text(reason, reason_len);
         memcpy(payload + 2, reason, reason_len);
         plen = 2 + reason_len;
     }
-    return encode_frame(ws, true, SWS_OP_CLOSE, payload, plen);
+    return encode_app(ws, true, SWS_OP_CLOSE, payload, plen);
+}
+
+sws_bytes sws_fragment(sws *ws, sws_opcode opcode, const uint8_t *data, size_t len)
+{
+    sws_bytes b;
+    bug(ws != NULL);
+    bug(!(len && !data));
+    bug(!ws->close_sent);
+    if (opcode == SWS_OP_CONT) {
+        bug(ws->send_opcode == SWS_OP_TEXT || ws->send_opcode == SWS_OP_BIN);
+    } else {
+        bug(opcode == SWS_OP_TEXT || opcode == SWS_OP_BIN);
+        require_send_idle(ws);
+    }
+    b = encode_app(ws, false, (int)opcode, data, len);
+    if (b.p && opcode != SWS_OP_CONT) {
+        ws->send_opcode = (int)opcode;
+    }
+    return b;
+}
+
+sws_bytes sws_fragment_end(sws *ws, const uint8_t *data, size_t len)
+{
+    sws_bytes b;
+    bug(ws != NULL);
+    bug(!(len && !data));
+    bug(!ws->close_sent);
+    bug(ws->send_opcode == SWS_OP_TEXT || ws->send_opcode == SWS_OP_BIN);
+    b = encode_app(ws, true, SWS_OP_CONT, data, len);
+    if (b.p) {
+        ws->send_opcode = 0;
+    }
+    return b;
 }
 
 bool sws_closing(const sws *ws)

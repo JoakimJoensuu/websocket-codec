@@ -7,23 +7,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-static sws_result pump(sws *from, sws *to)
-{
-    size_t n;
-    const uint8_t *p = sws_peek(from, &n);
-    sws_result r;
-
-    r.err = SWS_OK;
-    r.evs = NULL;
-    r.n = 0;
-    if (!n) {
-        return r;
-    }
-    r = sws_feed(to, p, n);
-    sws_mark_consumed(from, n);
-    return r;
-}
-
 static void show(const char *who, sws_result r)
 {
     size_t i;
@@ -42,26 +25,33 @@ static void show(const char *who, sws_result r)
     }
 }
 
+static sws_result pump(sws_bytes b, sws *to)
+{
+    if (!b.p || !b.n) {
+        fprintf(stderr, "encode failed\n");
+        exit(1);
+    }
+    return sws_feed(to, b.p, b.n);
+}
+
 int main(void)
 {
     sws *cli = sws_create(SWS_ROLE_CLIENT);
     sws *srv = sws_create(SWS_ROLE_SERVER);
     const uint8_t hi[] = "hello";
+    sws_result r;
 
     if (!cli || !srv) {
         return 1;
     }
 
-    sws_queue_text(cli, hi, sizeof hi - 1);
-    show("server", pump(cli, srv));
+    show("server", pump(sws_text_frame(cli, hi, sizeof hi - 1), srv));
 
-    sws_queue_text(srv, (const uint8_t *)"hi", 2);
-    show("client", pump(srv, cli));
+    show("client", pump(sws_text_frame(srv, (const uint8_t *)"hi", 2), cli));
 
-    sws_queue_close(cli, SWS_CLOSE_NORMAL, NULL, 0);
-    show("server", pump(cli, srv));
-    sws_queue_close(srv, SWS_CLOSE_NORMAL, NULL, 0);
-    show("client", pump(srv, cli));
+    r = pump(sws_close_frame(cli, SWS_CLOSE_NORMAL, NULL, 0), srv);
+    show("server", r);
+    show("client", sws_feed(cli, r.out.p, r.out.n));
 
     sws_destroy(cli);
     sws_destroy(srv);
