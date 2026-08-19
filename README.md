@@ -22,32 +22,25 @@ cmake -B build && cmake --build build && ctest --test-dir build
 
 ## API sketch
 
+`examples/hello.c` is two sessions in one process (no sockets). Peek bytes from one, feed them to the other:
+
 ```c
 #include "sws.h"
 
-sws *ws = sws_create(SWS_ROLE_SERVER); /* or SWS_ROLE_CLIENT */
+sws *cli = sws_create(SWS_ROLE_CLIENT);
+sws *srv = sws_create(SWS_ROLE_SERVER);
 
-/* inbound TCP bytes */
-sws_result in = sws_feed(ws, buf, n);
-size_t i;
-for (i = 0; i < in.n; i++) {
-    if (in.evs[i].kind == SWS_EV_TEXT) {
-        sws_send_text(ws, in.evs[i].data, in.evs[i].len);
-    }
-    if (in.evs[i].kind == SWS_EV_BIN) {
-        sws_send_bin(ws, in.evs[i].data, in.evs[i].len);
-    }
-    /* ping is auto-answered; close is auto-answered unless you disable it */
-}
+sws_send_text(cli, (const uint8_t *)"hello", 5);
 
-/* outbound TCP bytes */
 size_t n;
-const uint8_t *p = sws_peek(ws, &n);
-send(fd, p, n, 0);
-sws_consume(ws, n);
+const uint8_t *p = sws_peek(cli, &n);
+sws_result in = sws_feed(srv, p, n);
+sws_consume(cli, n);
 
-sws_destroy(ws);
+/* in.evs[0] is SWS_EV_TEXT "hello" */
 ```
+
+On a real connection, `peek`/`consume` go to `send()`, and `feed` takes bytes from `recv()`. `examples/echo_server.c` does that after the HTTP upgrade.
 
 Clients mask every outgoing frame (RFC 6455 §5.3). The default PRNG is
 **not** a CSPRNG; set `sws_config.rng` if you need unpredictable masks.
@@ -86,10 +79,11 @@ Config: `autobahn/fuzzingclient.json` (host) and
 ## Layout
 
 ```
-include/sws.h           public API
-src/sws.c               framer
-src/sws_utf8.c          streaming UTF-8
-tests/test_sws.c        unit tests
+include/sws.h            public API
+src/sws.c                framer
+src/sws_utf8.c           streaming UTF-8
+tests/test_sws.c         unit tests
+examples/hello.c         in-memory client + server
 examples/echo_server.c   Autobahn testee (HTTP + sockets)
 autobahn/                fuzzingclient specs
 scripts/run-autobahn.sh
