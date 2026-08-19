@@ -63,7 +63,7 @@ typedef enum {
     SWS_EV_NONE = 0,
     SWS_EV_TEXT,
     SWS_EV_BIN,
-    SWS_EV_PING, /**< Auto-pong may already be queued. */
+    SWS_EV_PING,
     SWS_EV_PONG,
     SWS_EV_CLOSE,
     SWS_EV_ERROR /**< A Close frame is usually queued. */
@@ -91,7 +91,6 @@ typedef struct sws_result {
 typedef struct sws_config {
     sws_role role;
     size_t max_message_size;    /**< Inbound assembled-message cap. Must be > 0. */
-    bool auto_pong;
     bool auto_close;
     uint32_t (*rng)(void *ctx); /**< NULL uses an internal PRNG (not a CSPRNG). */
     void *rng_ctx;
@@ -100,7 +99,7 @@ typedef struct sws_config {
 typedef struct sws sws;
 
 /**
- * @brief Set auto_pong and auto_close; zero the rest.
+ * @brief Set auto_close; zero the rest.
  *
  * Set @c role and @c max_message_size before sws_create_cfg.
  */

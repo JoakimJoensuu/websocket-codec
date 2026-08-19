@@ -284,6 +284,10 @@ static bool handle_events(sws *ws, sws_result in)
             if (sws_queue_bin(ws, in.evs[i].data, in.evs[i].len) != SWS_OK) {
                 stop = true;
             }
+        } else if (in.evs[i].kind == SWS_EV_PING) {
+            if (sws_queue_pong(ws, in.evs[i].data, in.evs[i].len) != SWS_OK) {
+                stop = true;
+            }
         } else if (in.evs[i].kind == SWS_EV_CLOSE || in.evs[i].kind == SWS_EV_ERROR) {
             stop = true;
         }

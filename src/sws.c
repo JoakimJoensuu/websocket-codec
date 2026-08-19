@@ -50,7 +50,6 @@ struct sws {
     sws_err last_err;
     sws_utf8 utf8;
     uint16_t close_code;
-    bool auto_pong;
     bool auto_close;
     bool fin;
     bool masked;
@@ -371,12 +370,6 @@ static int finish_message(sws *ws)
 static int on_control(sws *ws)
 {
     if (ws->opcode == SWS_OP_PING) {
-        if (ws->auto_pong && !ws->close_sent) {
-            int rc = encode_frame(ws, true, SWS_OP_PONG, ws->ctrl, ws->ctrl_len);
-            if (rc != SWS_OK) {
-                return fail(ws, (sws_err)rc, SWS_CLOSE_INTERNAL, "encode");
-            }
-        }
         if (ev_push(ws, SWS_EV_PING, ws->ctrl, ws->ctrl_len, 0) != 0) {
             return fail(ws, SWS_ERR_NOMEM, SWS_CLOSE_INTERNAL, "oom");
         }
@@ -659,7 +652,6 @@ void sws_config_default(sws_config *cfg)
 {
     bug(cfg != NULL);
     memset(cfg, 0, sizeof *cfg);
-    cfg->auto_pong = true;
     cfg->auto_close = true;
 }
 
@@ -685,7 +677,6 @@ sws *sws_create_cfg(const sws_config *cfg)
     }
     ws->role = cfg->role;
     ws->max_message_size = cfg->max_message_size;
-    ws->auto_pong = cfg->auto_pong;
     ws->auto_close = cfg->auto_close;
     ws->rng = cfg->rng;
     ws->rng_ctx = cfg->rng_ctx;

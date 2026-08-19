@@ -58,7 +58,7 @@ Servers never mask.
 | Client masking / server unmasking | HTTP/1.1 upgrade, `Sec-WebSocket-Key` |
 | Continuation / interleaved control frames | URL routing, subprotocols |
 | Close codes and UTF-8 (incl. split code points) | `permessage-deflate` (RFC 7692) |
-| Auto pong / auto close reply | |
+| Auto close reply | Application pong to ping |
 
 Autobahn cases 12.* and 13.* (compression) are excluded for that reason.
 

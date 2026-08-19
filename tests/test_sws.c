@@ -178,7 +178,12 @@ Ensure(sws, fragments_text_and_interleaves_ping)
     assert_that(r.err, is_equal_to(SWS_OK));
     assert_that(r.n, is_equal_to(1));
     assert_payload(&r.evs[0], SWS_EV_PING, ping, sizeof ping);
-    assert_that(sws_pending(server) > 0, is_true); /* auto pong */
+    assert_that(sws_pending(server), is_equal_to(0));
+    assert_that(sws_queue_pong(server, r.evs[0].data, r.evs[0].len), is_equal_to(SWS_OK));
+    r = xfer(server, client);
+    assert_that(r.err, is_equal_to(SWS_OK));
+    assert_that(r.n, is_equal_to(1));
+    assert_payload(&r.evs[0], SWS_EV_PONG, ping, sizeof ping);
 
     assert_that(sws_queue(client, SWS_OP_CONT, b, sizeof b, true), is_equal_to(SWS_OK));
     r = xfer(client, server);
