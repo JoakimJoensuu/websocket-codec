@@ -30,7 +30,7 @@ typedef struct {
     size_t nblock;
 } sha1;
 
-static uint32_t rol(uint32_t x, int n)
+static uint32_t rotate_left(uint32_t x, int n)
 {
     return (x << n) | (x >> (32 - n));
 }
@@ -58,7 +58,7 @@ static void sha1_block(sha1 *s, const uint8_t b[64])
                ((uint32_t)b[4 * i + 2] << 8) | (uint32_t)b[4 * i + 3];
     }
     for (i = 16; i < 80; i++) {
-        w[i] = rol(w[i - 3] ^ w[i - 8] ^ w[i - 14] ^ w[i - 16], 1);
+        w[i] = rotate_left(w[i - 3] ^ w[i - 8] ^ w[i - 14] ^ w[i - 16], 1);
     }
     a = s->h[0];
     bb = s->h[1];
@@ -79,10 +79,10 @@ static void sha1_block(sha1 *s, const uint8_t b[64])
             f = bb ^ c ^ d;
             k = 0xCA62C1D6u;
         }
-        temp = rol(a, 5) + f + e + k + w[i];
+        temp = rotate_left(a, 5) + f + e + k + w[i];
         e = d;
         d = c;
-        c = rol(bb, 30);
+        c = rotate_left(bb, 30);
         bb = a;
         a = temp;
     }
