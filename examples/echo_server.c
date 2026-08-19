@@ -309,7 +309,6 @@ static bool handle_events(sws *ws, sws_result in)
 
 static void session(int fd)
 {
-    sws_config cfg;
     sws *ws;
     uint8_t leftover[8192];
     size_t nleft = 0;
@@ -322,10 +321,7 @@ static void session(int fd)
         return;
     }
 
-    sws_config_default(&cfg);
-    cfg.role = SWS_ROLE_SERVER;
-    cfg.max_message_size = 32u * 1024u * 1024u;
-    ws = sws_create_cfg(&cfg);
+    ws = sws_create(SWS_ROLE_SERVER);
     if (!ws) {
         return;
     }

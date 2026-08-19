@@ -31,8 +31,7 @@ typedef enum {
     SWS_ERR_NOMEM = -1,
     SWS_ERR_PROTOCOL = -2,
     SWS_ERR_UTF8 = -3,
-    SWS_ERR_TOO_BIG = -4,
-    SWS_ERR_CLOSED = -5 /**< Further input after Close. */
+    SWS_ERR_CLOSED = -4 /**< Further input after Close. */
 } sws_err;
 
 typedef enum {
@@ -90,7 +89,6 @@ typedef struct sws_result {
 
 typedef struct sws_config {
     sws_role role;
-    size_t max_message_size;    /**< Inbound assembled-message cap. Must be > 0. */
     uint32_t (*rng)(void *ctx); /**< NULL uses an internal PRNG (not a CSPRNG). */
     void *rng_ctx;
 } sws_config;
@@ -98,18 +96,14 @@ typedef struct sws_config {
 typedef struct sws sws;
 
 /**
- * @brief Zero the struct.
- *
- * Set @c role and @c max_message_size before sws_create_cfg.
+ * @brief Zero the struct. Set @c role before sws_create_cfg.
  */
 void sws_config_default(sws_config *cfg);
 
 /**
- * @brief sws_config_default() plus @p role and @p max_message_size.
- * @param max_message_size Inbound assembled-message cap; must be > 0.
  * @return Heap session, or NULL on OOM.
  */
-sws *sws_create(sws_role role, size_t max_message_size);
+sws *sws_create(sws_role role);
 
 /**
  * @brief Create from @p cfg as given; does not apply sws_config_default.

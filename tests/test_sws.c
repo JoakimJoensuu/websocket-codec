@@ -5,9 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-enum { TEST_MAX_MESSAGE = 1024 * 1024 };
-
-/* Peer-illegal frames only. send_* will not emit these (programming errors abort). */
+/* Peer-illegal frames only. queue_* will not emit these (programming errors abort). */
 static const uint8_t KEY[4] = {0x01, 0x02, 0x03, 0x04};
 
 static void wr16(uint8_t *p, uint16_t v)
@@ -82,8 +80,8 @@ static sws *server;
 
 BeforeEach(sws)
 {
-    client = sws_create(SWS_ROLE_CLIENT, TEST_MAX_MESSAGE);
-    server = sws_create(SWS_ROLE_SERVER, TEST_MAX_MESSAGE);
+    client = sws_create(SWS_ROLE_CLIENT);
+    server = sws_create(SWS_ROLE_SERVER);
 }
 
 AfterEach(sws)
@@ -224,18 +222,18 @@ Ensure(sws, rejects_invalid_utf8_from_peer)
     assert_that(sws_last_close(server), is_equal_to(SWS_CLOSE_INVALID_DATA));
     assert_that(sws_pending(server) > 0, is_true);
     sws_destroy(server);
-    server = sws_create(SWS_ROLE_SERVER, TEST_MAX_MESSAGE);
+    server = sws_create(SWS_ROLE_SERVER);
 
     n = peer_frame(frame, true, SWS_OP_TEXT, true, 0, overlong, 2);
     assert_that(sws_feed(server, frame, n).err, is_equal_to(SWS_ERR_UTF8));
     sws_destroy(server);
-    server = sws_create(SWS_ROLE_SERVER, TEST_MAX_MESSAGE);
+    server = sws_create(SWS_ROLE_SERVER);
 
     n = peer_frame(frame, true, SWS_OP_TEXT, true, 0, incomplete, 1);
     assert_that(sws_feed(server, frame, n).err, is_equal_to(SWS_ERR_UTF8));
     assert_that(sws_last_close(server), is_equal_to(SWS_CLOSE_INVALID_DATA));
     sws_destroy(server);
-    server = sws_create(SWS_ROLE_SERVER, TEST_MAX_MESSAGE);
+    server = sws_create(SWS_ROLE_SERVER);
 
     n = peer_frame(frame, false, SWS_OP_TEXT, true, 0, early, 1);
     assert_that(sws_feed(server, frame, n).err, is_equal_to(SWS_ERR_UTF8));
@@ -265,8 +263,8 @@ Ensure(sws, close_handshake_echoes_reason_and_empty)
 
     sws_destroy(client);
     sws_destroy(server);
-    client = sws_create(SWS_ROLE_CLIENT, TEST_MAX_MESSAGE);
-    server = sws_create(SWS_ROLE_SERVER, TEST_MAX_MESSAGE);
+    client = sws_create(SWS_ROLE_CLIENT);
+    server = sws_create(SWS_ROLE_SERVER);
     assert_that(sws_queue_close(client, 0, NULL, 0), is_equal_to(SWS_OK));
     r = xfer(client, server);
     assert_that(r.err, is_equal_to(SWS_OK));
@@ -294,25 +292,6 @@ Ensure(sws, feeds_a_valid_stream_one_byte_at_a_time)
     sws_mark_consumed(client, n);
     assert_that(r.n, is_equal_to(1));
     assert_payload(&r.evs[0], SWS_EV_TEXT, "abc", 3);
-}
-
-Ensure(sws, rejects_message_over_configured_max)
-{
-    sws_config cfg;
-    sws *small;
-    uint8_t payload[8] = {0};
-    sws_result r;
-
-    sws_config_default(&cfg);
-    cfg.role = SWS_ROLE_SERVER;
-    cfg.max_message_size = 4;
-    small = sws_create_cfg(&cfg);
-    assert_that(small, is_non_null);
-    assert_that(sws_queue_bin(client, payload, sizeof payload), is_equal_to(SWS_OK));
-    r = xfer(client, small);
-    assert_that(r.err, is_equal_to(SWS_ERR_TOO_BIG));
-    assert_that(sws_last_close(small), is_equal_to(SWS_CLOSE_TOO_BIG));
-    sws_destroy(small);
 }
 
 Ensure(sws, delivers_two_messages_from_one_feed)
@@ -385,29 +364,29 @@ Ensure(sws, rejects_illegal_peer_frames)
     assert_that(sws_feed(server, frame, n).err, is_equal_to(SWS_ERR_PROTOCOL));
     assert_that(sws_last_close(server), is_equal_to(SWS_CLOSE_PROTOCOL));
     sws_destroy(server);
-    server = sws_create(SWS_ROLE_SERVER, TEST_MAX_MESSAGE);
+    server = sws_create(SWS_ROLE_SERVER);
 
     n = peer_frame(frame, true, SWS_OP_TEXT, true, 1, hi, 1);
     assert_that(sws_feed(server, frame, n).err, is_equal_to(SWS_ERR_PROTOCOL));
     sws_destroy(server);
-    server = sws_create(SWS_ROLE_SERVER, TEST_MAX_MESSAGE);
+    server = sws_create(SWS_ROLE_SERVER);
 
     n = peer_frame(frame, true, 0x3, true, 0, hi, 1);
     assert_that(sws_feed(server, frame, n).err, is_equal_to(SWS_ERR_PROTOCOL));
     sws_destroy(server);
-    server = sws_create(SWS_ROLE_SERVER, TEST_MAX_MESSAGE);
+    server = sws_create(SWS_ROLE_SERVER);
 
     n = peer_frame(frame, false, SWS_OP_PING, true, 0, hi, 1);
     assert_that(sws_feed(server, frame, n).err, is_equal_to(SWS_ERR_PROTOCOL));
     sws_destroy(server);
-    server = sws_create(SWS_ROLE_SERVER, TEST_MAX_MESSAGE);
+    server = sws_create(SWS_ROLE_SERVER);
 
     n = peer_frame(frame, true, SWS_OP_CONT, true, 0, hi, 1);
     assert_that(sws_feed(server, frame, n).err, is_equal_to(SWS_ERR_PROTOCOL));
     sws_destroy(server);
-    server = sws_create(SWS_ROLE_SERVER, TEST_MAX_MESSAGE);
+    server = sws_create(SWS_ROLE_SERVER);
 
-    cli = sws_create(SWS_ROLE_CLIENT, TEST_MAX_MESSAGE);
+    cli = sws_create(SWS_ROLE_CLIENT);
     n = peer_frame(frame, true, SWS_OP_TEXT, true, 0, hi, 1);
     assert_that(sws_feed(cli, frame, n).err, is_equal_to(SWS_ERR_PROTOCOL));
     sws_destroy(cli);
@@ -417,13 +396,13 @@ Ensure(sws, rejects_illegal_peer_frames)
     assert_that(sws_feed(server, frame, n).err, is_equal_to(SWS_ERR_PROTOCOL));
     assert_that(sws_last_close(server), is_equal_to(SWS_CLOSE_PROTOCOL));
     sws_destroy(server);
-    server = sws_create(SWS_ROLE_SERVER, TEST_MAX_MESSAGE);
+    server = sws_create(SWS_ROLE_SERVER);
 
     payload[0] = 0x00;
     n = peer_frame(frame, true, SWS_OP_CLOSE, true, 0, payload, 1);
     assert_that(sws_feed(server, frame, n).err, is_equal_to(SWS_ERR_PROTOCOL));
     sws_destroy(server);
-    server = sws_create(SWS_ROLE_SERVER, TEST_MAX_MESSAGE);
+    server = sws_create(SWS_ROLE_SERVER);
 
     /* 2-byte length encoding for a 1-byte payload (non-minimal). */
     frame[0] = 0x82;
@@ -452,7 +431,6 @@ int main(int argc, char **argv)
     add_test_with_context(suite, sws, rejects_invalid_utf8_from_peer);
     add_test_with_context(suite, sws, close_handshake_echoes_reason_and_empty);
     add_test_with_context(suite, sws, feeds_a_valid_stream_one_byte_at_a_time);
-    add_test_with_context(suite, sws, rejects_message_over_configured_max);
     add_test_with_context(suite, sws, delivers_two_messages_from_one_feed);
     add_test_with_context(suite, sws, delivers_ping_and_completed_text_from_one_feed);
     add_test_with_context(suite, sws, close_code_valid_matches_rfc);

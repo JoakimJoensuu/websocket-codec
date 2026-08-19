@@ -20,7 +20,6 @@ typedef enum {
 } parse_st;
 
 struct sws {
-    size_t max_message_size;
     uint32_t (*rng)(void *);
     void *rng_ctx;
     size_t hdr_got;
@@ -500,9 +499,9 @@ static int on_frame_header(sws *ws)
                 return fail(ws, SWS_ERR_PROTOCOL, SWS_CLOSE_PROTOCOL, "new data while fragmented");
             }
         }
-        if (plen > (uint64_t)ws->max_message_size ||
-            (uint64_t)ws->msg_len + plen > (uint64_t)ws->max_message_size) {
-            return fail(ws, SWS_ERR_TOO_BIG, SWS_CLOSE_TOO_BIG, "message too big");
+        if (plen > (uint64_t)(size_t)-1 ||
+            (uint64_t)ws->msg_len > (uint64_t)(size_t)-1 - plen) {
+            return fail(ws, SWS_ERR_NOMEM, SWS_CLOSE_INTERNAL, "oom");
         }
     }
 
@@ -647,13 +646,12 @@ void sws_config_default(sws_config *cfg)
     memset(cfg, 0, sizeof *cfg);
 }
 
-sws *sws_create(sws_role role, size_t max_message_size)
+sws *sws_create(sws_role role)
 {
     sws_config cfg;
     bug(role == SWS_ROLE_CLIENT || role == SWS_ROLE_SERVER);
     sws_config_default(&cfg);
     cfg.role = role;
-    cfg.max_message_size = max_message_size;
     return sws_create_cfg(&cfg);
 }
 
@@ -662,13 +660,11 @@ sws *sws_create_cfg(const sws_config *cfg)
     sws *ws;
     bug(cfg != NULL);
     bug(cfg->role == SWS_ROLE_CLIENT || cfg->role == SWS_ROLE_SERVER);
-    bug(cfg->max_message_size > 0);
     ws = (sws *)calloc(1, sizeof *ws);
     if (!ws) {
         return NULL;
     }
     ws->role = cfg->role;
-    ws->max_message_size = cfg->max_message_size;
     ws->rng = cfg->rng;
     ws->rng_ctx = cfg->rng_ctx;
     ws->rng_state = 0xC0FFEEu ^ (uint32_t)(uintptr_t)ws;
