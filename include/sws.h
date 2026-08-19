@@ -10,10 +10,6 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #define SWS_VERSION_MAJOR 0
 #define SWS_VERSION_MINOR 1
 #define SWS_VERSION_PATCH 0
@@ -90,7 +86,7 @@ typedef struct sws_result {
 
 typedef struct sws_config {
     sws_role role;
-    size_t max_message_size;    /**< 0 means 16 MiB. */
+    size_t max_message_size;    /**< Inbound assembled-message cap. Must be > 0. */
     bool auto_pong;
     bool auto_close;
     uint32_t (*rng)(void *ctx); /**< NULL uses an internal PRNG (not a CSPRNG). */
@@ -99,11 +95,11 @@ typedef struct sws_config {
 
 typedef struct sws sws;
 
-/** auto_pong and auto_close on; remaining fields zero. */
+/** auto_pong and auto_close on. Set role and max_message_size before create_cfg. */
 void sws_config_default(sws_config *cfg);
 
-/** sws_config_default() plus @p role. NULL on OOM. */
-sws *sws_create(sws_role role);
+/** sws_config_default() plus @p role and @p max_message_size. NULL on OOM. */
+sws *sws_create(sws_role role, size_t max_message_size);
 
 /** NULL on OOM. Does not apply sws_config_default. */
 sws *sws_create_cfg(const sws_config *cfg);
@@ -170,9 +166,5 @@ uint16_t sws_last_close(const sws *ws);
 
 /** 1000–1014 except 1004/1005/1006, and 3000–4999. */
 bool sws_close_code_valid(uint16_t code);
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif /* SWS_H */

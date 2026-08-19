@@ -27,8 +27,8 @@ cmake -B build && cmake --build build && ctest --test-dir build
 ```c
 #include "sws.h"
 
-sws *cli = sws_create(SWS_ROLE_CLIENT);
-sws *srv = sws_create(SWS_ROLE_SERVER);
+sws *cli = sws_create(SWS_ROLE_CLIENT, 64 * 1024);
+sws *srv = sws_create(SWS_ROLE_SERVER, 64 * 1024);
 
 sws_send_text(cli, (const uint8_t *)"hello", 5);
 
@@ -41,6 +41,10 @@ sws_consume(cli, n);
 ```
 
 On a real connection, `peek`/`consume` go to `send()`, and `feed` takes bytes from `recv()`. `examples/echo_server.c` does that after the HTTP upgrade.
+
+`max_message_size` is the inbound assembled-message cap (must be > 0).
+The library does not pick a default; `examples/echo_server.c` uses 32 MiB
+for Autobahn.
 
 Clients mask every outgoing frame (RFC 6455 §5.3). The default PRNG is
 **not** a CSPRNG; set `sws_config.rng` if you need unpredictable masks.

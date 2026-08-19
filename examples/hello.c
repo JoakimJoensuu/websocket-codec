@@ -44,8 +44,8 @@ static void show(const char *who, sws_result r)
 
 int main(void)
 {
-    sws *cli = sws_create(SWS_ROLE_CLIENT);
-    sws *srv = sws_create(SWS_ROLE_SERVER);
+    sws *cli = sws_create(SWS_ROLE_CLIENT, 64 * 1024);
+    sws *srv = sws_create(SWS_ROLE_SERVER, 64 * 1024);
     const uint8_t hi[] = "hello";
 
     if (!cli || !srv) {

@@ -4,7 +4,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define SWS_DEFAULT_MAX (16u * 1024u * 1024u)
 #define SWS_CTRL_MAX 125
 
 static void bug(bool ok)
@@ -664,12 +663,13 @@ void sws_config_default(sws_config *cfg)
     cfg->auto_close = true;
 }
 
-sws *sws_create(sws_role role)
+sws *sws_create(sws_role role, size_t max_message_size)
 {
     sws_config cfg;
     bug(role == SWS_ROLE_CLIENT || role == SWS_ROLE_SERVER);
     sws_config_default(&cfg);
     cfg.role = role;
+    cfg.max_message_size = max_message_size;
     return sws_create_cfg(&cfg);
 }
 
@@ -678,12 +678,13 @@ sws *sws_create_cfg(const sws_config *cfg)
     sws *ws;
     bug(cfg != NULL);
     bug(cfg->role == SWS_ROLE_CLIENT || cfg->role == SWS_ROLE_SERVER);
+    bug(cfg->max_message_size > 0);
     ws = (sws *)calloc(1, sizeof *ws);
     if (!ws) {
         return NULL;
     }
     ws->role = cfg->role;
-    ws->max_message_size = cfg->max_message_size ? cfg->max_message_size : SWS_DEFAULT_MAX;
+    ws->max_message_size = cfg->max_message_size;
     ws->auto_pong = cfg->auto_pong;
     ws->auto_close = cfg->auto_close;
     ws->rng = cfg->rng;
