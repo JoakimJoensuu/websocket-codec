@@ -1,12 +1,12 @@
-#include "swsf_utf8.h"
+#include "utf8.h"
 
-void swsf_utf8_init(swsf_utf8 *u)
+void utf8_init(utf8 *u)
 {
     u->codep = 0;
     u->need = 0;
 }
 
-static int feed_byte(swsf_utf8 *u, uint8_t b)
+static int feed_byte(utf8 *u, uint8_t b)
 {
     if (u->need == 0) {
         if (b <= 0x7Fu) {
@@ -62,7 +62,7 @@ static int feed_byte(swsf_utf8 *u, uint8_t b)
     return 0;
 }
 
-int swsf_utf8_feed(swsf_utf8 *u, const uint8_t *p, size_t n)
+int utf8_feed(utf8 *u, const uint8_t *p, size_t n)
 {
     size_t i;
     for (i = 0; i < n; i++) {
@@ -73,7 +73,7 @@ int swsf_utf8_feed(swsf_utf8 *u, const uint8_t *p, size_t n)
     return 0;
 }
 
-int swsf_utf8_finish(const swsf_utf8 *u)
+int utf8_finish(const utf8 *u)
 {
     return u->need == 0 ? 0 : -1;
 }

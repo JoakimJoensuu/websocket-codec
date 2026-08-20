@@ -81,7 +81,7 @@ Config: `autobahn/fuzzingclient.json` (host) and
 ```
 include/swsf.h            public API
 src/swsf.c                framer
-src/swsf_utf8.c           streaming UTF-8
+src/utf8.c               streaming UTF-8
 tests/test_swsf.c         unit tests
 examples/hello.c         in-memory client + server
 examples/threaded.c      threads + send-order sketch (not the library)

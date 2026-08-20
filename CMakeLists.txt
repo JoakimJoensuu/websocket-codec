@@ -56,7 +56,7 @@ target_compile_definitions(cgreen_static PRIVATE VERSION="1.6.4")
 find_package(Threads REQUIRED)
 target_link_libraries(cgreen_static PUBLIC Threads::Threads m)
 
-add_library(swsf src/swsf.c src/swsf_utf8.c)
+add_library(swsf src/swsf.c src/utf8.c)
 target_include_directories(swsf PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>)

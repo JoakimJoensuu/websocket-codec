@@ -1,5 +1,5 @@
 #include "swsf.h"
-#include "swsf_utf8.h"
+#include "utf8.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -49,8 +49,8 @@ struct swsf {
     unsigned mask_off;
     int msg_opcode;
     swsf_err last_err;
-    swsf_utf8 utf8;
-    swsf_utf8 send_utf8;
+    utf8 utf8;
+    utf8 send_utf8;
     uint16_t close_code;
     bool fin;
     bool masked;
@@ -365,7 +365,7 @@ static int finish_message(swsf *ws)
 {
     swsf_event_kind kind;
     if (ws->msg_opcode == SWSF_OP_TEXT) {
-        if (swsf_utf8_finish(&ws->utf8) != 0) {
+        if (utf8_finish(&ws->utf8) != 0) {
             return fail(ws, SWSF_ERR_UTF8, SWSF_CLOSE_INVALID_DATA, "invalid utf-8");
         }
         kind = SWSF_EV_TEXT;
@@ -418,12 +418,12 @@ static int on_control(swsf *ws)
         uint16_t code = rd16(ws->ctrl);
         const uint8_t *reason = ws->ctrl + 2;
         size_t rlen = ws->ctrl_len - 2;
-        swsf_utf8 u;
+        utf8 u;
         if (!swsf_close_code_valid(code)) {
             return fail(ws, SWSF_ERR_PROTOCOL, SWSF_CLOSE_PROTOCOL, "bad close code");
         }
-        swsf_utf8_init(&u);
-        if (swsf_utf8_feed(&u, reason, rlen) != 0 || swsf_utf8_finish(&u) != 0) {
+        utf8_init(&u);
+        if (utf8_feed(&u, reason, rlen) != 0 || utf8_finish(&u) != 0) {
             return fail(ws, SWSF_ERR_UTF8, SWSF_CLOSE_INVALID_DATA, "bad close reason");
         }
         ws->close_code = code;
@@ -449,7 +449,7 @@ static int dispatch_empty_or_start(swsf *ws)
     if (ws->opcode != SWSF_OP_CONT) {
         ws->msg_opcode = ws->opcode;
         ws->msg_len = 0;
-        swsf_utf8_init(&ws->utf8);
+        utf8_init(&ws->utf8);
     }
     if (ws->fin) {
         int rc = finish_message(ws);
@@ -548,7 +548,7 @@ static int on_frame_header(swsf *ws)
     if (!is_control(ws->opcode) && ws->opcode != SWSF_OP_CONT) {
         ws->msg_opcode = ws->opcode;
         ws->msg_len = 0;
-        swsf_utf8_init(&ws->utf8);
+        utf8_init(&ws->utf8);
     }
     return SWSF_OK;
 }
@@ -581,7 +581,7 @@ static int on_payload_bytes(swsf *ws, const uint8_t *src, size_t n)
             }
             memcpy(ws->msg + ws->msg_len, tmp, chunk);
             if (ws->msg_opcode == SWSF_OP_TEXT) {
-                if (swsf_utf8_feed(&ws->utf8, ws->msg + ws->msg_len, chunk) != 0) {
+                if (utf8_feed(&ws->utf8, ws->msg + ws->msg_len, chunk) != 0) {
                     return fail(ws, SWSF_ERR_UTF8, SWSF_CLOSE_INVALID_DATA, "invalid utf-8");
                 }
             }
@@ -744,21 +744,21 @@ static void require_send_idle(const swsf *ws)
 
 static void check_text(const uint8_t *data, size_t len)
 {
-    swsf_utf8 u;
-    swsf_utf8_init(&u);
+    utf8 u;
+    utf8_init(&u);
     if (len) {
-        bug(swsf_utf8_feed(&u, data, len) == 0);
+        bug(utf8_feed(&u, data, len) == 0);
     }
-    bug(swsf_utf8_finish(&u) == 0);
+    bug(utf8_finish(&u) == 0);
 }
 
-static swsf_utf8 check_send_text(swsf_utf8 u, const uint8_t *data, size_t len, bool finish)
+static utf8 check_send_text(utf8 u, const uint8_t *data, size_t len, bool finish)
 {
     if (len) {
-        bug(swsf_utf8_feed(&u, data, len) == 0);
+        bug(utf8_feed(&u, data, len) == 0);
     }
     if (finish) {
-        bug(swsf_utf8_finish(&u) == 0);
+        bug(utf8_finish(&u) == 0);
     }
     return u;
 }
@@ -822,7 +822,7 @@ swsf_bytes swsf_close_frame(swsf *ws, uint16_t code, const uint8_t *reason, size
 swsf_bytes swsf_fragment(swsf *ws, swsf_opcode opcode, const uint8_t *data, size_t len)
 {
     swsf_bytes b;
-    swsf_utf8 next;
+    utf8 next;
     bool text;
     bug(ws != NULL);
     bug(!(len && !data));
@@ -837,7 +837,7 @@ swsf_bytes swsf_fragment(swsf *ws, swsf_opcode opcode, const uint8_t *data, size
            (opcode == SWSF_OP_CONT && ws->send_opcode == SWSF_OP_TEXT);
     if (text) {
         if (opcode == SWSF_OP_TEXT) {
-            swsf_utf8_init(&next);
+            utf8_init(&next);
         } else {
             next = ws->send_utf8;
         }
@@ -858,7 +858,7 @@ swsf_bytes swsf_fragment(swsf *ws, swsf_opcode opcode, const uint8_t *data, size
 swsf_bytes swsf_fragment_end(swsf *ws, const uint8_t *data, size_t len)
 {
     swsf_bytes b;
-    swsf_utf8 next;
+    utf8 next;
     bool text;
     bug(ws != NULL);
     bug(!(len && !data));
