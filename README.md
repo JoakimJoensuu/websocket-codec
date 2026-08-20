@@ -37,7 +37,7 @@ sws_result in = sws_feed(srv, b.p, b.n);
 /* in.out is Pong / Close echo / fail Close from this parse, if any */
 ```
 
-On a real connection, `send()` the frame bytes and `in.out`; `feed` takes bytes from `recv()`. `examples/echo_server.c` does that after the HTTP upgrade.
+On a real connection, `send()` the frame bytes and `in.out`; `feed` takes bytes from `recv()`. Copy those bytes first if you will encode again before `send()` finishes — `examples/threaded.c` does that with a slow reader in another thread. `examples/echo_server.c` is the Autobahn testee after the HTTP upgrade.
 
 A later `sws_*_frame` / `sws_fragment*` on the same session invalidates the previous helper’s `sws_bytes`. Copy if you need to hold them. `sws_feed`’s events and `out` stay valid until the next `sws_feed`.
 
@@ -83,6 +83,7 @@ src/sws.c                framer
 src/sws_utf8.c           streaming UTF-8
 tests/test_sws.c         unit tests
 examples/hello.c         in-memory client + server
+examples/threaded.c      threads + application send buffer
 examples/echo_server.c   Autobahn testee (HTTP + sockets)
 autobahn/                fuzzingclient specs
 scripts/run-autobahn.sh
