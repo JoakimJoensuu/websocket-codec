@@ -2,7 +2,7 @@
 
 Not language or protocol standards.
 
-## Prose
+## Writing
 
 Keep it short. Commit titles too.
 
