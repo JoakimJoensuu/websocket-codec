@@ -37,7 +37,7 @@ sws_result in = sws_feed(srv, b.p, b.n);
 /* in.out is Pong / Close echo / fail Close from this parse, if any */
 ```
 
-On a real connection, `send()` the frame bytes and `in.out`; `feed` takes bytes from `recv()`. Copy those bytes first if you will encode again before `send()` finishes — `examples/threaded.c` does that with a slow reader in another thread. `examples/echo_server.c` is the Autobahn testee after the HTTP upgrade.
+On a real connection, `send()` the frame bytes and `in.out`; `feed` takes bytes from `recv()`. `examples/threaded.c` copies each frame into control vs data lists so a Pong can precede leftover TEXT; `send()` may still short-write. `examples/echo_server.c` is the Autobahn testee after the HTTP upgrade.
 
 A later `sws_*_frame` / `sws_fragment*` on the same session invalidates the previous helper’s `sws_bytes`. Copy if you need to hold them. `sws_feed`’s events and `out` stay valid until the next `sws_feed`.
 

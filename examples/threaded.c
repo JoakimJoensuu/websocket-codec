@@ -1,10 +1,13 @@
 /**
  * Client and server threads on a socketpair. No HTTP.
  *
- * Frame helpers return a view that the next encode invalidates, and send()
- * may take only part of it. Copy into an application buffer and drain that.
+ * Copy each encoded frame (or feed.out chunk) into a list. Control
+ * (Pong, Close, Ping) is a separate list from data so a Pong can go out
+ * before leftover TEXT. Finish the in-flight frame first; never splice
+ * into the middle of a frame.
  *
- * The client reads slowly so the server cannot push a whole frame in one send.
+ * The client reads slowly and sends a Ping while the server still has
+ * TEXT queued.
  */
 
 #define _POSIX_C_SOURCE 200809L
@@ -28,56 +31,130 @@ static void pause_ms(unsigned ms)
     nanosleep(&ts, NULL);
 }
 
-enum { NMSG = 40, MSGLEN = 200, SLOW_READ = 8 };
+enum { NMSG = 12, MSGLEN = 3000, SLOW_READ = 16 };
 
-typedef struct {
+typedef struct frame {
     uint8_t *p;
     size_t len;
-    size_t cap;
-} outbuf;
+    size_t off;
+    struct frame *next;
+} frame;
 
-static int out_append(outbuf *o, const uint8_t *p, size_t n)
+typedef struct {
+    frame *head;
+    frame *tail;
+} flist;
+
+typedef struct {
+    flist ctrl;
+    flist data;
+    frame *cur;
+} txq;
+
+static int flist_push(flist *l, sws_bytes b)
 {
-    uint8_t *np;
-    size_t cap;
-    if (!n) {
+    frame *f;
+    if (!b.n) {
         return 0;
     }
-    cap = o->cap ? o->cap : 256;
-    while (cap < o->len + n) {
-        if (cap > ((size_t)-1) / 2) {
-            return -1;
-        }
-        cap *= 2;
-    }
-    np = (uint8_t *)realloc(o->p, cap);
-    if (!np) {
+    if (!b.p) {
         return -1;
     }
-    memcpy(np + o->len, p, n);
-    o->p = np;
-    o->cap = cap;
-    o->len += n;
+    f = (frame *)calloc(1, sizeof *f);
+    if (!f) {
+        return -1;
+    }
+    f->p = (uint8_t *)malloc(b.n);
+    if (!f->p) {
+        free(f);
+        return -1;
+    }
+    memcpy(f->p, b.p, b.n);
+    f->len = b.n;
+    if (l->tail) {
+        l->tail->next = f;
+    } else {
+        l->head = f;
+    }
+    l->tail = f;
     return 0;
 }
 
-static int out_copy(outbuf *o, sws_bytes b)
+static frame *flist_pop(flist *l)
 {
-    if (!b.p && b.n) {
-        return -1;
+    frame *f = l->head;
+    if (!f) {
+        return NULL;
     }
-    return out_append(o, b.p, b.n);
+    l->head = f->next;
+    if (!l->head) {
+        l->tail = NULL;
+    }
+    f->next = NULL;
+    return f;
 }
 
-static int out_flush(int fd, outbuf *o, int *short_sends)
+static void frame_free(frame *f)
 {
-    while (o->len) {
-        ssize_t w = send(fd, o->p, o->len, MSG_DONTWAIT);
+    if (!f) {
+        return;
+    }
+    free(f->p);
+    free(f);
+}
+
+static void tx_free(txq *tx)
+{
+    frame *f;
+    frame_free(tx->cur);
+    tx->cur = NULL;
+    while ((f = flist_pop(&tx->ctrl))) {
+        frame_free(f);
+    }
+    while ((f = flist_pop(&tx->data))) {
+        frame_free(f);
+    }
+}
+
+static int tx_idle(const txq *tx)
+{
+    return !tx->cur && !tx->ctrl.head && !tx->data.head;
+}
+
+static int tx_push_ctrl(txq *tx, sws_bytes b, int *preempt)
+{
+    if (b.n && preempt && (tx->data.head || tx->cur)) {
+        (*preempt)++;
+    }
+    return flist_push(&tx->ctrl, b);
+}
+
+static int tx_push_data(txq *tx, sws_bytes b)
+{
+    return flist_push(&tx->data, b);
+}
+
+static int tx_flush(int fd, txq *tx, int send_flags, int *short_sends)
+{
+    for (;;) {
+        size_t left;
+        ssize_t w;
+        if (!tx->cur) {
+            tx->cur = flist_pop(&tx->ctrl);
+            if (!tx->cur) {
+                tx->cur = flist_pop(&tx->data);
+            }
+            if (!tx->cur) {
+                return 0;
+            }
+        }
+        left = tx->cur->len - tx->cur->off;
+        w = send(fd, tx->cur->p + tx->cur->off, left, send_flags);
         if (w < 0) {
             if (errno == EINTR) {
                 continue;
             }
-            if (errno == EAGAIN || errno == EWOULDBLOCK) {
+            if ((send_flags & MSG_DONTWAIT) && (errno == EAGAIN || errno == EWOULDBLOCK)) {
                 return 0;
             }
             return -1;
@@ -85,27 +162,23 @@ static int out_flush(int fd, outbuf *o, int *short_sends)
         if (w == 0) {
             return -1;
         }
-        if ((size_t)w < o->len && short_sends) {
+        if ((size_t)w < left && short_sends) {
             (*short_sends)++;
         }
-        memmove(o->p, o->p + (size_t)w, o->len - (size_t)w);
-        o->len -= (size_t)w;
+        tx->cur->off += (size_t)w;
+        if (tx->cur->off >= tx->cur->len) {
+            frame_free(tx->cur);
+            tx->cur = NULL;
+        }
     }
-    return 0;
-}
-
-static void out_free(outbuf *o)
-{
-    free(o->p);
-    o->p = NULL;
-    o->len = 0;
-    o->cap = 0;
 }
 
 typedef struct {
     int fd;
     int short_sends;
     int texts;
+    int pongs;
+    int preempt;
     int rc;
 } thread_arg;
 
@@ -113,10 +186,11 @@ static void *server_fn(void *argp)
 {
     thread_arg *arg = (thread_arg *)argp;
     sws *ws = sws_create_server();
-    outbuf out = {0};
+    txq tx = {0};
     uint8_t payload[MSGLEN];
     uint8_t in[256];
-    int i;
+    int i = 0;
+    int close_queued = 0;
     int snd = 1024;
 
     arg->rc = 1;
@@ -126,31 +200,37 @@ static void *server_fn(void *argp)
     setsockopt(arg->fd, SOL_SOCKET, SO_SNDBUF, &snd, sizeof snd);
     memset(payload, 'x', sizeof payload);
 
-    for (i = 0; i < NMSG; i++) {
-        sws_bytes b = sws_text_frame(ws, payload, sizeof payload);
-        if (out_copy(&out, b) != 0 || out_flush(arg->fd, &out, &arg->short_sends) != 0) {
-            goto done;
-        }
-    }
-
-    if (out_copy(&out, sws_close_frame(ws, SWS_CLOSE_NORMAL, NULL, 0)) != 0) {
-        goto done;
-    }
-
     for (;;) {
         ssize_t n;
         sws_result r;
-        if (out_flush(arg->fd, &out, &arg->short_sends) != 0) {
+        if (i < NMSG) {
+            if (tx_push_data(&tx, sws_text_frame(ws, payload, sizeof payload)) != 0) {
+                goto done;
+            }
+            i++;
+        }
+        if (i >= NMSG && !close_queued && !tx.data.head && !tx.cur) {
+            if (tx_push_ctrl(&tx, sws_close_frame(ws, SWS_CLOSE_NORMAL, NULL, 0), NULL) != 0) {
+                goto done;
+            }
+            close_queued = 1;
+        }
+        if (tx_flush(arg->fd, &tx, MSG_DONTWAIT, &arg->short_sends) != 0) {
             goto done;
         }
-        n = recv(arg->fd, in, sizeof in, out.len ? MSG_DONTWAIT : 0);
+        n = recv(arg->fd, in, sizeof in,
+                 (i >= NMSG && close_queued && tx_idle(&tx)) ? 0 : MSG_DONTWAIT);
         if (n < 0) {
             if (errno == EINTR) {
                 continue;
             }
-            if ((errno == EAGAIN || errno == EWOULDBLOCK) && out.len) {
-                pause_ms(1);
-                continue;
+            if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                if (i < NMSG || !close_queued || !tx_idle(&tx)) {
+                    if (!tx_idle(&tx)) {
+                        pause_ms(1);
+                    }
+                    continue;
+                }
             }
             goto done;
         }
@@ -158,25 +238,20 @@ static void *server_fn(void *argp)
             goto done;
         }
         r = sws_feed(ws, in, (size_t)n);
-        if (out_copy(&out, r.out) != 0) {
+        if (tx_push_ctrl(&tx, r.out, &arg->preempt) != 0) {
             goto done;
         }
-        if (r.err != SWS_OK || sws_closed(ws)) {
-            while (out.len) {
-                if (out_flush(arg->fd, &out, &arg->short_sends) != 0) {
-                    goto done;
-                }
-                if (out.len) {
-                    pause_ms(1);
-                }
-            }
-            arg->rc = (r.err == SWS_OK) ? 0 : 1;
+        if (r.err != SWS_OK) {
+            goto done;
+        }
+        if (sws_closed(ws) && tx_idle(&tx)) {
+            arg->rc = 0;
             goto done;
         }
     }
 
 done:
-    out_free(&out);
+    tx_free(&tx);
     sws_destroy(ws);
     return NULL;
 }
@@ -185,8 +260,9 @@ static void *client_fn(void *argp)
 {
     thread_arg *arg = (thread_arg *)argp;
     sws *ws = sws_create_client(NULL, NULL);
-    outbuf out = {0};
+    txq tx = {0};
     uint8_t in[SLOW_READ];
+    int pinged = 0;
 
     arg->rc = 1;
     if (!ws) {
@@ -203,33 +279,36 @@ static void *client_fn(void *argp)
             goto done;
         }
         r = sws_feed(ws, in, (size_t)n);
-        if (out_copy(&out, r.out) != 0) {
+        if (tx_push_ctrl(&tx, r.out, NULL) != 0) {
             goto done;
         }
-        while (out.len) {
-            ssize_t w = send(arg->fd, out.p, out.len, 0);
-            if (w < 0) {
-                if (errno == EINTR) {
-                    continue;
-                }
+        if (!pinged && arg->texts > 0) {
+            if (tx_push_ctrl(&tx, sws_ping_frame(ws, (const uint8_t *)"?", 1), NULL) != 0) {
                 goto done;
             }
-            memmove(out.p, out.p + (size_t)w, out.len - (size_t)w);
-            out.len -= (size_t)w;
+            pinged = 1;
+        }
+        if (tx_flush(arg->fd, &tx, 0, NULL) != 0) {
+            goto done;
         }
         for (i = 0; i < r.n; i++) {
             if (r.evs[i].kind == SWS_EV_TEXT) {
                 arg->texts++;
+            } else if (r.evs[i].kind == SWS_EV_PONG) {
+                arg->pongs++;
             }
         }
-        if (r.err != SWS_OK || sws_closed(ws)) {
-            arg->rc = (r.err == SWS_OK && arg->texts == NMSG) ? 0 : 1;
+        if (r.err != SWS_OK) {
+            goto done;
+        }
+        if (sws_closed(ws) && tx_idle(&tx)) {
+            arg->rc = (arg->texts == NMSG && arg->pongs >= 1) ? 0 : 1;
             goto done;
         }
     }
 
 done:
-    out_free(&out);
+    tx_free(&tx);
     sws_destroy(ws);
     return NULL;
 }
@@ -256,7 +335,7 @@ int main(void)
     close(fd[0]);
     close(fd[1]);
 
-    printf("client got %d/%d texts; server short sends: %d\n", cli.texts, NMSG,
-           srv.short_sends);
-    return (srv.rc || cli.rc || srv.short_sends == 0) ? 1 : 0;
+    printf("client got %d/%d texts, %d pongs; server short sends: %d, preempt: %d\n",
+           cli.texts, NMSG, cli.pongs, srv.short_sends, srv.preempt);
+    return (srv.rc || cli.rc || srv.short_sends == 0 || srv.preempt == 0) ? 1 : 0;
 }
