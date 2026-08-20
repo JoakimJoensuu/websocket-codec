@@ -42,7 +42,6 @@ struct sws {
     sws_event *evs;
     size_t ev_n;
     size_t ev_cap;
-    sws_role role;
     uint32_t rng_state;
     parse_st st;
     int opcode;
@@ -55,6 +54,7 @@ struct sws {
     uint16_t close_code;
     bool fin;
     bool masked;
+    bool client;
     bool close_sent;
     bool close_recv;
     uint8_t mask_key[4];
@@ -237,7 +237,7 @@ static int encode_frame(sws *ws, bool fin, int opcode, const uint8_t *data, size
 {
     uint8_t hdr[14];
     size_t hlen = 2;
-    bool mask = (ws->role == SWS_ROLE_CLIENT);
+    bool mask = ws->client;
     uint8_t key[4];
     size_t total;
     size_t off;
@@ -478,7 +478,7 @@ static int on_frame_header(sws *ws)
     if (!is_known_opcode(ws->opcode)) {
         return fail(ws, SWS_ERR_PROTOCOL, SWS_CLOSE_PROTOCOL, "bad opcode");
     }
-    if (ws->role == SWS_ROLE_SERVER) {
+    if (!ws->client) {
         if (!ws->masked) {
             return fail(ws, SWS_ERR_PROTOCOL, SWS_CLOSE_PROTOCOL, "unmasked client frame");
         }
@@ -667,13 +667,13 @@ static int parse_in(sws *ws)
     return ws->last_err == SWS_OK ? SWS_OK : (int)ws->last_err;
 }
 
-static sws *create(sws_role role, uint32_t (*rng)(void *), void *rng_ctx)
+static sws *create(bool client, uint32_t (*rng)(void *), void *rng_ctx)
 {
     sws *ws = (sws *)calloc(1, sizeof *ws);
     if (!ws) {
         return NULL;
     }
-    ws->role = role;
+    ws->client = client;
     ws->rng = rng;
     ws->rng_ctx = rng_ctx;
     ws->rng_state = 0xC0FFEEu ^ (uint32_t)(uintptr_t)ws;
@@ -685,12 +685,12 @@ static sws *create(sws_role role, uint32_t (*rng)(void *), void *rng_ctx)
 
 sws *sws_create_client(uint32_t (*rng)(void *ctx), void *rng_ctx)
 {
-    return create(SWS_ROLE_CLIENT, rng, rng_ctx);
+    return create(true, rng, rng_ctx);
 }
 
 sws *sws_create_server(void)
 {
-    return create(SWS_ROLE_SERVER, NULL, NULL);
+    return create(false, NULL, NULL);
 }
 
 void sws_destroy(sws *ws)

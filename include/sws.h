@@ -16,12 +16,6 @@
 #define SWS_VERSION_MINOR 1
 #define SWS_VERSION_PATCH 0
 
-/** @brief Clients mask every outgoing frame; servers must not (RFC 6455 §5.3). */
-typedef enum {
-    SWS_ROLE_CLIENT = 0,
-    SWS_ROLE_SERVER = 1
-} sws_role;
-
 /**
  * @brief Peer or resource failures. Programming errors abort; there is no
  *        invalid-argument code.
