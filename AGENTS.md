@@ -2,8 +2,6 @@
 
 Follow:
 - [CONVENTIONS.md](CONVENTIONS.md)
-- [`.clang-format`](.clang-format)
-- [`.clang-tidy`](.clang-tidy)
 
 When a reusable convention is stated or implied in this conversation,
 propose its wording here. Do not record one-off habits. State how we
