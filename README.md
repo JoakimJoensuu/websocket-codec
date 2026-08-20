@@ -27,8 +27,8 @@ cmake -B build && cmake --build build && ctest --test-dir build
 ```c
 #include "sws.h"
 
-sws *cli = sws_create(SWS_ROLE_CLIENT);
-sws *srv = sws_create(SWS_ROLE_SERVER);
+sws *cli = sws_create_client(NULL, NULL);
+sws *srv = sws_create_server();
 
 sws_bytes b = sws_text_frame(cli, (const uint8_t *)"hello", 5);
 sws_result in = sws_feed(srv, b.p, b.n);
@@ -42,7 +42,7 @@ On a real connection, `send()` the frame bytes and `in.out`; `feed` takes bytes 
 A later `sws_*_frame` / `sws_fragment*` on the same session invalidates the previous helper’s `sws_bytes`. Copy if you need to hold them. `sws_feed`’s events and `out` stay valid until the next `sws_feed`.
 
 Clients mask every outgoing frame (RFC 6455 §5.3). The default PRNG is
-**not** a CSPRNG; set `sws_config.rng` if you need unpredictable masks.
+**not** a CSPRNG; pass `rng` to `sws_create_client` if you need unpredictable masks.
 Servers never mask.
 
 ## What is in vs out of scope

@@ -314,7 +314,7 @@ static void session(int fd)
         return;
     }
 
-    ws = sws_create(SWS_ROLE_SERVER);
+    ws = sws_create_server();
     if (!ws) {
         return;
     }

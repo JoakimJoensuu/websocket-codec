@@ -99,29 +99,20 @@ typedef struct sws_result {
     sws_bytes out; /**< Pong, Close echo, and fail Close from this parse. */
 } sws_result;
 
-typedef struct sws_config {
-    sws_role role;
-    uint32_t (*rng)(void *ctx); /**< NULL uses an internal PRNG (not a CSPRNG). */
-    void *rng_ctx;
-} sws_config;
-
 typedef struct sws sws;
 
 /**
- * @brief Zero the struct. Set @c role before sws_create_cfg.
- */
-void sws_config_default(sws_config *cfg);
-
-/**
+ * @param rng NULL uses an internal PRNG (not a CSPRNG). Clients mask every
+ *            outgoing frame.
  * @return Heap session, or NULL on OOM.
  */
-sws *sws_create(sws_role role);
+sws *sws_create_client(uint32_t (*rng)(void *ctx), void *rng_ctx);
 
 /**
- * @brief Create from @p cfg as given; does not apply sws_config_default.
+ * @brief Servers never mask.
  * @return Heap session, or NULL on OOM.
  */
-sws *sws_create_cfg(const sws_config *cfg);
+sws *sws_create_server(void);
 
 /**
  * @brief Parse @p src. Incomplete frames stay buffered.

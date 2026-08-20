@@ -84,8 +84,8 @@ static sws *server;
 
 BeforeEach(sws)
 {
-    client = sws_create(SWS_ROLE_CLIENT);
-    server = sws_create(SWS_ROLE_SERVER);
+    client = sws_create_client(NULL, NULL);
+    server = sws_create_server();
 }
 
 AfterEach(sws)
@@ -218,19 +218,19 @@ Ensure(sws, rejects_invalid_utf8_from_peer)
     assert_that(sws_last_close(server), is_equal_to(SWS_CLOSE_INVALID_DATA));
     assert_that(r.out.n > 0, is_true);
     sws_destroy(server);
-    server = sws_create(SWS_ROLE_SERVER);
+    server = sws_create_server();
 
     n = peer_frame(frame, true, SWS_OP_TEXT, true, 0, overlong, 2);
     assert_that(sws_feed(server, frame, n).err, is_equal_to(SWS_ERR_UTF8));
     sws_destroy(server);
-    server = sws_create(SWS_ROLE_SERVER);
+    server = sws_create_server();
 
     n = peer_frame(frame, true, SWS_OP_TEXT, true, 0, incomplete, 1);
     r = sws_feed(server, frame, n);
     assert_that(r.err, is_equal_to(SWS_ERR_UTF8));
     assert_that(sws_last_close(server), is_equal_to(SWS_CLOSE_INVALID_DATA));
     sws_destroy(server);
-    server = sws_create(SWS_ROLE_SERVER);
+    server = sws_create_server();
 
     n = peer_frame(frame, false, SWS_OP_TEXT, true, 0, early, 1);
     assert_that(sws_feed(server, frame, n).err, is_equal_to(SWS_ERR_UTF8));
@@ -257,8 +257,8 @@ Ensure(sws, close_handshake_echoes_reason_and_empty)
 
     sws_destroy(client);
     sws_destroy(server);
-    client = sws_create(SWS_ROLE_CLIENT);
-    server = sws_create(SWS_ROLE_SERVER);
+    client = sws_create_client(NULL, NULL);
+    server = sws_create_server();
     r = feed_bytes(server, sws_close_frame(client, 0, NULL, 0));
     assert_that(r.err, is_equal_to(SWS_OK));
     assert_that(r.n, is_equal_to(1));
@@ -351,29 +351,29 @@ Ensure(sws, rejects_illegal_peer_frames)
     assert_that(sws_feed(server, frame, n).err, is_equal_to(SWS_ERR_PROTOCOL));
     assert_that(sws_last_close(server), is_equal_to(SWS_CLOSE_PROTOCOL));
     sws_destroy(server);
-    server = sws_create(SWS_ROLE_SERVER);
+    server = sws_create_server();
 
     n = peer_frame(frame, true, SWS_OP_TEXT, true, 1, hi, 1);
     assert_that(sws_feed(server, frame, n).err, is_equal_to(SWS_ERR_PROTOCOL));
     sws_destroy(server);
-    server = sws_create(SWS_ROLE_SERVER);
+    server = sws_create_server();
 
     n = peer_frame(frame, true, 0x3, true, 0, hi, 1);
     assert_that(sws_feed(server, frame, n).err, is_equal_to(SWS_ERR_PROTOCOL));
     sws_destroy(server);
-    server = sws_create(SWS_ROLE_SERVER);
+    server = sws_create_server();
 
     n = peer_frame(frame, false, SWS_OP_PING, true, 0, hi, 1);
     assert_that(sws_feed(server, frame, n).err, is_equal_to(SWS_ERR_PROTOCOL));
     sws_destroy(server);
-    server = sws_create(SWS_ROLE_SERVER);
+    server = sws_create_server();
 
     n = peer_frame(frame, true, SWS_OP_CONT, true, 0, hi, 1);
     assert_that(sws_feed(server, frame, n).err, is_equal_to(SWS_ERR_PROTOCOL));
     sws_destroy(server);
-    server = sws_create(SWS_ROLE_SERVER);
+    server = sws_create_server();
 
-    cli = sws_create(SWS_ROLE_CLIENT);
+    cli = sws_create_client(NULL, NULL);
     n = peer_frame(frame, true, SWS_OP_TEXT, true, 0, hi, 1);
     assert_that(sws_feed(cli, frame, n).err, is_equal_to(SWS_ERR_PROTOCOL));
     sws_destroy(cli);
@@ -383,13 +383,13 @@ Ensure(sws, rejects_illegal_peer_frames)
     assert_that(sws_feed(server, frame, n).err, is_equal_to(SWS_ERR_PROTOCOL));
     assert_that(sws_last_close(server), is_equal_to(SWS_CLOSE_PROTOCOL));
     sws_destroy(server);
-    server = sws_create(SWS_ROLE_SERVER);
+    server = sws_create_server();
 
     payload[0] = 0x00;
     n = peer_frame(frame, true, SWS_OP_CLOSE, true, 0, payload, 1);
     assert_that(sws_feed(server, frame, n).err, is_equal_to(SWS_ERR_PROTOCOL));
     sws_destroy(server);
-    server = sws_create(SWS_ROLE_SERVER);
+    server = sws_create_server();
 
     /* 2-byte length encoding for a 1-byte payload (non-minimal). */
     frame[0] = 0x82;

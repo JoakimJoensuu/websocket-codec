@@ -667,38 +667,30 @@ static int parse_in(sws *ws)
     return ws->last_err == SWS_OK ? SWS_OK : (int)ws->last_err;
 }
 
-void sws_config_default(sws_config *cfg)
+static sws *create(sws_role role, uint32_t (*rng)(void *), void *rng_ctx)
 {
-    bug(cfg != NULL);
-    memset(cfg, 0, sizeof *cfg);
-}
-
-sws *sws_create(sws_role role)
-{
-    sws_config cfg;
-    bug(role == SWS_ROLE_CLIENT || role == SWS_ROLE_SERVER);
-    sws_config_default(&cfg);
-    cfg.role = role;
-    return sws_create_cfg(&cfg);
-}
-
-sws *sws_create_cfg(const sws_config *cfg)
-{
-    sws *ws;
-    bug(cfg != NULL);
-    bug(cfg->role == SWS_ROLE_CLIENT || cfg->role == SWS_ROLE_SERVER);
-    ws = (sws *)calloc(1, sizeof *ws);
+    sws *ws = (sws *)calloc(1, sizeof *ws);
     if (!ws) {
         return NULL;
     }
-    ws->role = cfg->role;
-    ws->rng = cfg->rng;
-    ws->rng_ctx = cfg->rng_ctx;
+    ws->role = role;
+    ws->rng = rng;
+    ws->rng_ctx = rng_ctx;
     ws->rng_state = 0xC0FFEEu ^ (uint32_t)(uintptr_t)ws;
     ws->st = ST_HDR;
     ws->hdr_need = 2;
     ws->close_code = SWS_CLOSE_NO_STATUS;
     return ws;
+}
+
+sws *sws_create_client(uint32_t (*rng)(void *ctx), void *rng_ctx)
+{
+    return create(SWS_ROLE_CLIENT, rng, rng_ctx);
+}
+
+sws *sws_create_server(void)
+{
+    return create(SWS_ROLE_SERVER, NULL, NULL);
 }
 
 void sws_destroy(sws *ws)

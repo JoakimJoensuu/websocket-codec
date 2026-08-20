@@ -36,8 +36,8 @@ static sws_result pump(sws_bytes b, sws *to)
 
 int main(void)
 {
-    sws *cli = sws_create(SWS_ROLE_CLIENT);
-    sws *srv = sws_create(SWS_ROLE_SERVER);
+    sws *cli = sws_create_client(NULL, NULL);
+    sws *srv = sws_create_server();
     const uint8_t hi[] = "hello";
     sws_result r;
 
