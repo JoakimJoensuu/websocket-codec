@@ -1,0 +1,40 @@
+# Conventions
+
+Not language or protocol standards.
+
+## Prose
+
+Keep it short. Commit titles too.
+
+## Errors
+
+Programming errors abort. Do not return an error code, and do not use
+`assert` (that disappears under `NDEBUG`). Call `abort()`.
+
+That includes NULL where a pointer is required, a positive length with a
+NULL buffer, and any other caller-contract violation. A destroy function
+is the exception: it accepts NULL, same as `free`.
+
+Expected failures still return an error code: out of memory, and peer or
+resource failures. Do not add an invalid-argument code.
+
+## Functions
+
+Do not use a boolean parameter to choose between two operations. Use two
+functions. A flag on one operation is fine.
+
+## Comments
+
+Comment only what names, types, and control flow cannot say. When a public
+declaration needs a comment, write it as a documentation comment on the
+header, not on the `.c` definition.
+
+## Tests
+
+Assert observable behaviour through the public API, not internal
+implementation.
+
+## Commits
+
+The title says what the commit does, not what the program does afterwards.
+It must complete the sentence "This commit will …".
