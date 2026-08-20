@@ -12,7 +12,7 @@
 
 #define _POSIX_C_SOURCE 200809L
 
-#include "sws.h"
+#include "swsf.h"
 
 #include <errno.h>
 #include <pthread.h>
@@ -51,7 +51,7 @@ typedef struct {
     frame *cur;
 } txq;
 
-static int flist_push(flist *l, sws_bytes b)
+static int flist_push(flist *l, swsf_bytes b)
 {
     frame *f;
     if (!b.n) {
@@ -121,7 +121,7 @@ static int tx_idle(const txq *tx)
     return !tx->cur && !tx->ctrl.head && !tx->data.head;
 }
 
-static int tx_push_ctrl(txq *tx, sws_bytes b, int *preempt)
+static int tx_push_ctrl(txq *tx, swsf_bytes b, int *preempt)
 {
     if (b.n && preempt && (tx->data.head || tx->cur)) {
         (*preempt)++;
@@ -129,7 +129,7 @@ static int tx_push_ctrl(txq *tx, sws_bytes b, int *preempt)
     return flist_push(&tx->ctrl, b);
 }
 
-static int tx_push_data(txq *tx, sws_bytes b)
+static int tx_push_data(txq *tx, swsf_bytes b)
 {
     return flist_push(&tx->data, b);
 }
@@ -185,7 +185,7 @@ typedef struct {
 static void *server_fn(void *argp)
 {
     thread_arg *arg = (thread_arg *)argp;
-    sws *ws = sws_create_server();
+    swsf *ws = swsf_create_server();
     txq tx = {0};
     uint8_t payload[MSGLEN];
     uint8_t in[256];
@@ -202,15 +202,15 @@ static void *server_fn(void *argp)
 
     for (;;) {
         ssize_t n;
-        sws_result r;
+        swsf_result r;
         if (i < NMSG) {
-            if (tx_push_data(&tx, sws_text_frame(ws, payload, sizeof payload)) != 0) {
+            if (tx_push_data(&tx, swsf_text_frame(ws, payload, sizeof payload)) != 0) {
                 goto done;
             }
             i++;
         }
         if (i >= NMSG && !close_queued && !tx.data.head && !tx.cur) {
-            if (tx_push_ctrl(&tx, sws_close_frame(ws, SWS_CLOSE_NORMAL, NULL, 0), NULL) != 0) {
+            if (tx_push_ctrl(&tx, swsf_close_frame(ws, SWSF_CLOSE_NORMAL, NULL, 0), NULL) != 0) {
                 goto done;
             }
             close_queued = 1;
@@ -237,14 +237,14 @@ static void *server_fn(void *argp)
         if (n == 0) {
             goto done;
         }
-        r = sws_feed(ws, in, (size_t)n);
+        r = swsf_feed(ws, in, (size_t)n);
         if (tx_push_ctrl(&tx, r.out, &arg->preempt) != 0) {
             goto done;
         }
-        if (r.err != SWS_OK) {
+        if (r.err != SWSF_OK) {
             goto done;
         }
-        if (sws_closed(ws) && tx_idle(&tx)) {
+        if (swsf_closed(ws) && tx_idle(&tx)) {
             arg->rc = 0;
             goto done;
         }
@@ -252,14 +252,14 @@ static void *server_fn(void *argp)
 
 done:
     tx_free(&tx);
-    sws_destroy(ws);
+    swsf_destroy(ws);
     return NULL;
 }
 
 static void *client_fn(void *argp)
 {
     thread_arg *arg = (thread_arg *)argp;
-    sws *ws = sws_create_client(NULL, NULL);
+    swsf *ws = swsf_create_client(NULL, NULL);
     txq tx = {0};
     uint8_t in[SLOW_READ];
     int pinged = 0;
@@ -271,19 +271,19 @@ static void *client_fn(void *argp)
 
     for (;;) {
         ssize_t n;
-        sws_result r;
+        swsf_result r;
         size_t i;
         pause_ms(2);
         n = recv(arg->fd, in, sizeof in, 0);
         if (n <= 0) {
             goto done;
         }
-        r = sws_feed(ws, in, (size_t)n);
+        r = swsf_feed(ws, in, (size_t)n);
         if (tx_push_ctrl(&tx, r.out, NULL) != 0) {
             goto done;
         }
         if (!pinged && arg->texts > 0) {
-            if (tx_push_ctrl(&tx, sws_ping_frame(ws, (const uint8_t *)"?", 1), NULL) != 0) {
+            if (tx_push_ctrl(&tx, swsf_ping_frame(ws, (const uint8_t *)"?", 1), NULL) != 0) {
                 goto done;
             }
             pinged = 1;
@@ -292,16 +292,16 @@ static void *client_fn(void *argp)
             goto done;
         }
         for (i = 0; i < r.n; i++) {
-            if (r.evs[i].kind == SWS_EV_TEXT) {
+            if (r.evs[i].kind == SWSF_EV_TEXT) {
                 arg->texts++;
-            } else if (r.evs[i].kind == SWS_EV_PONG) {
+            } else if (r.evs[i].kind == SWSF_EV_PONG) {
                 arg->pongs++;
             }
         }
-        if (r.err != SWS_OK) {
+        if (r.err != SWSF_OK) {
             goto done;
         }
-        if (sws_closed(ws) && tx_idle(&tx)) {
+        if (swsf_closed(ws) && tx_idle(&tx)) {
             arg->rc = (arg->texts == NMSG && arg->pongs >= 1) ? 0 : 1;
             goto done;
         }
@@ -309,7 +309,7 @@ static void *client_fn(void *argp)
 
 done:
     tx_free(&tx);
-    sws_destroy(ws);
+    swsf_destroy(ws);
     return NULL;
 }
 

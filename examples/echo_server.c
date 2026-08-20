@@ -1,12 +1,12 @@
 /**
- * Autobahn testee: POSIX TCP + HTTP upgrade, then sws.
+ * Autobahn testee: POSIX TCP + HTTP upgrade, then swsf.
  *
  * Usage: `echo_server [port]`
  */
 
 #define _POSIX_C_SOURCE 200809L
 
-#include "sws.h"
+#include "swsf.h"
 
 #include <arpa/inet.h>
 #include <errno.h>
@@ -267,7 +267,7 @@ static int send_all(int fd, const uint8_t *p, size_t n)
     return 0;
 }
 
-static int send_bytes(int fd, sws_bytes b)
+static int send_bytes(int fd, swsf_bytes b)
 {
     if (!b.n) {
         return 0;
@@ -275,25 +275,25 @@ static int send_bytes(int fd, sws_bytes b)
     return send_all(fd, b.p, b.n);
 }
 
-static bool handle_events(int fd, sws *ws, sws_result in)
+static bool handle_events(int fd, swsf *ws, swsf_result in)
 {
     size_t i;
     bool stop = false;
     for (i = 0; i < in.n; i++) {
-        sws_bytes b;
+        swsf_bytes b;
         b.p = NULL;
         b.n = 0;
-        if (in.evs[i].kind == SWS_EV_TEXT) {
-            b = sws_text_frame(ws, in.evs[i].data, in.evs[i].len);
+        if (in.evs[i].kind == SWSF_EV_TEXT) {
+            b = swsf_text_frame(ws, in.evs[i].data, in.evs[i].len);
             if (!b.p || send_bytes(fd, b) != 0) {
                 stop = true;
             }
-        } else if (in.evs[i].kind == SWS_EV_BIN) {
-            b = sws_bin_frame(ws, in.evs[i].data, in.evs[i].len);
+        } else if (in.evs[i].kind == SWSF_EV_BIN) {
+            b = swsf_bin_frame(ws, in.evs[i].data, in.evs[i].len);
             if (!b.p || send_bytes(fd, b) != 0) {
                 stop = true;
             }
-        } else if (in.evs[i].kind == SWS_EV_CLOSE || in.evs[i].kind == SWS_EV_ERROR) {
+        } else if (in.evs[i].kind == SWSF_EV_CLOSE || in.evs[i].kind == SWSF_EV_ERROR) {
             stop = true;
         }
     }
@@ -302,7 +302,7 @@ static bool handle_events(int fd, sws *ws, sws_result in)
 
 static void session(int fd)
 {
-    sws *ws;
+    swsf *ws;
     uint8_t leftover[8192];
     size_t nleft = 0;
     uint8_t buf[64 * 1024];
@@ -314,19 +314,19 @@ static void session(int fd)
         return;
     }
 
-    ws = sws_create_server();
+    ws = swsf_create_server();
     if (!ws) {
         return;
     }
 
     if (nleft) {
-        sws_result in = sws_feed(ws, leftover, nleft);
+        swsf_result in = swsf_feed(ws, leftover, nleft);
         if (send_bytes(fd, in.out) != 0) {
-            sws_destroy(ws);
+            swsf_destroy(ws);
             return;
         }
-        if (in.err != SWS_OK) {
-            sws_destroy(ws);
+        if (in.err != SWSF_OK) {
+            swsf_destroy(ws);
             return;
         }
         stop = handle_events(fd, ws, in);
@@ -334,24 +334,24 @@ static void session(int fd)
 
     for (;;) {
         ssize_t r;
-        sws_result in;
-        if (stop || sws_closing(ws)) {
+        swsf_result in;
+        if (stop || swsf_closing(ws)) {
             break;
         }
         r = recv(fd, buf, sizeof buf, 0);
         if (r <= 0) {
             break;
         }
-        in = sws_feed(ws, buf, (size_t)r);
+        in = swsf_feed(ws, buf, (size_t)r);
         if (send_bytes(fd, in.out) != 0) {
             break;
         }
-        if (in.err != SWS_OK) {
+        if (in.err != SWSF_OK) {
             break;
         }
         stop = handle_events(fd, ws, in);
     }
-    sws_destroy(ws);
+    swsf_destroy(ws);
 }
 
 int main(int argc, char **argv)
@@ -386,7 +386,7 @@ int main(int argc, char **argv)
         perror("listen");
         return 1;
     }
-    fprintf(stderr, "sws echo server on port %d\n", port);
+    fprintf(stderr, "swsf echo server on port %d\n", port);
     for (;;) {
         int c = accept(fd, NULL, NULL);
         if (c < 0) {
