@@ -58,7 +58,7 @@ masks. Servers never mask.
 | Continuation / interleaved control frames | URL routing, subprotocols |
 | Close codes and UTF-8 (incl. split code points) | `permessage-deflate` (RFC 7692) |
 | Fail Close, Pong for Ping, Close echo | Unsolicited Ping / Pong, initiating Close |
-| | HTTP upgrade / Autobahn testee (`examples/echo_server.c`) |
+| | Send queue (`swsq`) |
 
 Autobahn cases 12.* and 13.* (compression) are excluded for that reason.
 
