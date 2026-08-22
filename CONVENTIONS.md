@@ -4,7 +4,12 @@ Not language or protocol standards.
 
 ## Writing
 
-Keep it short. Commit titles too.
+Keep it short. Commit and PR titles too.
+
+## Source of truth
+
+Do not write the same fact in two places. One source of truth.
+Tools and other files refer to it, or say nothing.
 
 ## Errors
 
@@ -34,9 +39,8 @@ header, not on the `.c` definition.
 Assert observable behaviour through the public API, not internal
 implementation.
 
-## Commits
+## Commits and PRs
 
-The title says what the commit does, not what the program does afterwards.
-It must complete the sentence "This commit will …".
-
-Do not attribute a commit or pull request to a tool or agent.
+The title says what the change does, not what the program does or a
+document states afterwards. A title must complete the sentence
+"This commit/PR will …".
