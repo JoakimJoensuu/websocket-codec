@@ -5,6 +5,7 @@ Checks: >
   -*,
   clang-analyzer-*,
   clang-diagnostic-*,
+  -clang-diagnostic-gcc-install-dir-libstdcxx,
   bugprone-*,
   -bugprone-easily-swappable-parameters,
   cert-*,
