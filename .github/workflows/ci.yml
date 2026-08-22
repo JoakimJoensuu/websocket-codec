@@ -12,27 +12,23 @@ concurrency:
 jobs:
   style:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      pull-requests: read
     steps:
       - uses: actions/checkout@v5
       - name: Compile commands
         run: cmake -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
-      - uses: cpp-linter/cpp-linter-action@v2
-        id: linter
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          version: "22"
-          style: file
-          tidy-checks: ""
-          database: build
-          file-annotations: false
-          step-summary: true
-      - name: Fail if style checks failed
-        if: steps.linter.outputs.checks-failed > 0
-        run: exit 1
+      - name: Install clang-format-22 and clang-tidy-22
+        run: |
+          . /etc/os-release
+          sudo wget -qO /etc/apt/trusted.gpg.d/apt.llvm.org.asc \
+            https://apt.llvm.org/llvm-snapshot.gpg.key
+          echo "deb https://apt.llvm.org/${VERSION_CODENAME}/ llvm-toolchain-${VERSION_CODENAME}-22 main" \
+            | sudo tee /etc/apt/sources.list.d/llvm-22.list
+          sudo apt-get update
+          sudo apt-get install -y clang-format-22 clang-tidy-22
+      - name: clang-format
+        run: clang-format-22 --dry-run -Werror $(git ls-files '*.c' '*.h')
+      - name: clang-tidy
+        run: clang-tidy-22 -p build --quiet --warnings-as-errors='*' $(git ls-files '*.c' '*.h')
 
   build:
     runs-on: ubuntu-latest
