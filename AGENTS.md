@@ -6,8 +6,6 @@ Read and follow:
 They apply to the files and commits you write. If a change goes against a
 convention, say so; if it is meant to stand, propose the replacement.
 
-Do not attribute a commit or pull request to a tool or agent.
-
 When the user's input states or implies a standing practice, propose how
 we write it, in wording another repository could reuse. A correction counts
 when it is how that kind of thing should always be done. One instance
@@ -27,3 +25,7 @@ already counts. Edit in its own commit.
 If something existing contradicts a convention, the existing thing is
 wrong. Do not change the convention to match. Propose a fix as described
 above. If files contradict themselves or each other, flag that too.
+
+## Commits and pull requests
+
+Do not attribute a commit or pull request to a tool or agent.
