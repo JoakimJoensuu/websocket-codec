@@ -19,10 +19,6 @@ Programming errors abort, expected failures still return an error.
 
 In libraries, prefix only what is exposed.
 
-## Names
-
-In libraries, prefix only what is exposed.
-
 ## Functions
 
 Do not use a boolean parameter to choose between two operations. Use two

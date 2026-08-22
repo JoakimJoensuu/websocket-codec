@@ -1,4 +1,8 @@
-Checks: '*'
+Checks: >
+  *,
+  -llvmlibc-restrict-system-libc-headers,
+  -altera-*,
+  -hicpp-use-nullptr
 WarningsAsErrors: '*'
 HeaderFilterRegex: '.*'
 FormatStyle: file

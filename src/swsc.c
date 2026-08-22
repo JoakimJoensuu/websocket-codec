@@ -5,7 +5,27 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define SWSC_CTRL_MAX 125
+#define HDR_BASE 2
+#define LEN16_EXT 2
+#define LEN64_EXT 8
+#define MASK_LEN 4
+#define HDR_MAX (HDR_BASE + LEN64_EXT + MASK_LEN)
+
+#define LEN16 126
+#define LEN64 127
+
+#define FIN_BIT 0x80u
+#define RSV_MASK 0x70u
+#define OPCODE_MASK 0x0Fu
+#define MASK_BIT 0x80u
+#define LEN7_MASK 0x7Fu
+#define CTRL_BIT 0x8
+#define LEN64_MSB 0x8000000000000000ull
+
+#define CLOSE_APP_MIN 3000u
+#define CLOSE_APP_MAX 4999u
+#define CLOSE_STD_MAX 1014u
+#define CLOSE_RESERVED 1004u
 
 #define bug(ok)                                                                \
   do {                                                                         \
@@ -54,8 +74,8 @@ struct swsc {
   bool client;
   bool close_sent;
   bool close_recv;
-  uint8_t mask_key[4];
-  uint8_t hdr[14];
+  uint8_t mask_key[MASK_LEN];
+  uint8_t hdr[HDR_MAX];
   uint8_t ctrl[SWSC_CTRL_MAX];
 };
 
@@ -73,17 +93,18 @@ static uint32_t default_rng(void *ctx) {
 }
 
 bool swsc_close_code_valid(uint16_t code) {
-  if (code >= 3000u && code <= 4999u) {
+  if (code >= CLOSE_APP_MIN && code <= CLOSE_APP_MAX) {
     return true;
   }
-  if (code >= 1000u && code <= 1014u && code != 1004u && code != 1005u &&
-      code != 1006u) {
+  if (code >= SWSC_CLOSE_NORMAL && code <= CLOSE_STD_MAX &&
+      code != CLOSE_RESERVED && code != SWSC_CLOSE_NO_STATUS &&
+      code != SWSC_CLOSE_ABNORMAL) {
     return true;
   }
   return false;
 }
 
-static bool is_control(int op) { return (op & 0x8) != 0; }
+static bool is_control(int op) { return (op & CTRL_BIT) != 0; }
 
 static bool is_known_opcode(int op) {
   return op == SWSC_OP_CONT || op == SWSC_OP_TEXT || op == SWSC_OP_BIN ||
@@ -97,7 +118,7 @@ static uint16_t rd16(const uint8_t *p) {
 static uint64_t rd64(const uint8_t *p) {
   uint64_t v = 0;
   int i;
-  for (i = 0; i < 8; i++) {
+  for (i = 0; i < (int)sizeof(uint64_t); i++) {
     v = (v << 8) | p[i];
   }
   return v;
@@ -197,7 +218,7 @@ static uint32_t next_rng(swsc *ws) {
   return default_rng(&ws->rng_state);
 }
 
-static void fill_mask(swsc *ws, uint8_t key[4]) {
+static void fill_mask(swsc *ws, uint8_t key[MASK_LEN]) {
   uint32_t r = next_rng(ws);
   key[0] = (uint8_t)r;
   key[1] = (uint8_t)(r >> 8);
@@ -205,20 +226,20 @@ static void fill_mask(swsc *ws, uint8_t key[4]) {
   key[3] = (uint8_t)(r >> 24);
 }
 
-static void apply_mask(uint8_t *p, size_t n, const uint8_t key[4]) {
+static void apply_mask(uint8_t *p, size_t n, const uint8_t key[MASK_LEN]) {
   size_t i;
   for (i = 0; i < n; i++) {
-    p[i] = (uint8_t)(p[i] ^ key[i & 3]);
+    p[i] = (uint8_t)(p[i] ^ key[i & (MASK_LEN - 1)]);
   }
 }
 
 static int encode_frame(swsc *ws, bool fin, int opcode, const uint8_t *data,
                         size_t len, uint8_t **buf, size_t *blen, size_t *bcap,
                         bool append) {
-  uint8_t hdr[14];
-  size_t hlen = 2;
+  uint8_t hdr[HDR_MAX];
+  size_t hlen = HDR_BASE;
   bool mask = ws->client;
-  uint8_t key[4];
+  uint8_t key[MASK_LEN];
   size_t total;
   size_t off;
 
@@ -228,23 +249,23 @@ static int encode_frame(swsc *ws, bool fin, int opcode, const uint8_t *data,
   bug(!is_control(opcode) || (fin && len <= SWSC_CTRL_MAX));
   bug(!(len && !data));
 
-  hdr[0] = (uint8_t)((fin ? 0x80u : 0u) | (opcode & 0x0Fu));
-  if (len <= 125) {
+  hdr[0] = (uint8_t)((fin ? FIN_BIT : 0u) | (opcode & OPCODE_MASK));
+  if (len <= SWSC_CTRL_MAX) {
     hdr[1] = (uint8_t)len;
-  } else if (len <= 0xFFFFu) {
-    hdr[1] = 126;
-    wr16(hdr + 2, (uint16_t)len);
-    hlen = 4;
+  } else if (len <= UINT16_MAX) {
+    hdr[1] = LEN16;
+    wr16(hdr + HDR_BASE, (uint16_t)len);
+    hlen = HDR_BASE + LEN16_EXT;
   } else {
-    hdr[1] = 127;
-    wr64(hdr + 2, (uint64_t)len);
-    hlen = 10;
+    hdr[1] = LEN64;
+    wr64(hdr + HDR_BASE, (uint64_t)len);
+    hlen = HDR_BASE + LEN64_EXT;
   }
   if (mask) {
-    hdr[1] = (uint8_t)(hdr[1] | 0x80u);
+    hdr[1] = (uint8_t)(hdr[1] | MASK_BIT);
     fill_mask(ws, key);
-    memcpy(hdr + hlen, key, 4);
-    hlen += 4;
+    memcpy(hdr + hlen, key, MASK_LEN);
+    hlen += MASK_LEN;
   }
 
   total = hlen + len;
@@ -296,9 +317,9 @@ static swsc_bytes encode_app(swsc *ws, bool fin, int opcode,
 }
 
 static int fail(swsc *ws, swsc_err err, uint16_t code, const char *reason) {
-  uint8_t payload[125];
+  uint8_t payload[SWSC_CTRL_MAX];
   size_t rlen = 0;
-  size_t plen = 2;
+  size_t plen = SWSC_CLOSE_CODE_LEN;
 
   if (ws->last_err == SWSC_OK) {
     ws->last_err = err;
@@ -311,11 +332,11 @@ static int fail(swsc *ws, swsc_err err, uint16_t code, const char *reason) {
     wr16(payload, code);
     if (reason) {
       rlen = strlen(reason);
-      if (rlen > 123) {
-        rlen = 123;
+      if (rlen > SWSC_REASON_MAX) {
+        rlen = SWSC_REASON_MAX;
       }
-      memcpy(payload + 2, reason, rlen);
-      plen = 2 + rlen;
+      memcpy(payload + SWSC_CLOSE_CODE_LEN, reason, rlen);
+      plen = SWSC_CLOSE_CODE_LEN + rlen;
     }
     encode_frame(ws, true, SWSC_OP_CLOSE, payload, plen, &ws->reply,
                  &ws->reply_len, &ws->reply_cap, true);
@@ -325,15 +346,15 @@ static int fail(swsc *ws, swsc_err err, uint16_t code, const char *reason) {
 }
 
 static int header_len(uint8_t b1) {
-  int n = 2;
-  int len7 = b1 & 0x7F;
-  if (len7 == 126) {
-    n += 2;
-  } else if (len7 == 127) {
-    n += 8;
+  int n = HDR_BASE;
+  int len7 = b1 & LEN7_MASK;
+  if (len7 == LEN16) {
+    n += LEN16_EXT;
+  } else if (len7 == LEN64) {
+    n += LEN64_EXT;
   }
-  if (b1 & 0x80) {
-    n += 4;
+  if (b1 & MASK_BIT) {
+    n += MASK_LEN;
   }
   return n;
 }
@@ -387,14 +408,14 @@ static int on_control(swsc *ws) {
     ws->st = ST_DEAD;
     return SWSC_OK;
   }
-  if (ws->ctrl_len == 1) {
+  if (ws->ctrl_len < SWSC_CLOSE_CODE_LEN) {
     return fail(ws, SWSC_ERR_PROTOCOL, SWSC_CLOSE_PROTOCOL,
                 "bad close payload");
   }
   {
     uint16_t code = rd16(ws->ctrl);
-    const uint8_t *reason = ws->ctrl + 2;
-    size_t rlen = ws->ctrl_len - 2;
+    const uint8_t *reason = ws->ctrl + SWSC_CLOSE_CODE_LEN;
+    size_t rlen = ws->ctrl_len - SWSC_CLOSE_CODE_LEN;
     utf8 u;
     if (!swsc_close_code_valid(code)) {
       return fail(ws, SWSC_ERR_PROTOCOL, SWSC_CLOSE_PROTOCOL, "bad close code");
@@ -442,14 +463,14 @@ static int on_frame_header(swsc *ws) {
   uint8_t b1 = ws->hdr[1];
   uint64_t plen;
   int len7;
-  size_t off = 2;
+  size_t off = HDR_BASE;
 
-  ws->fin = (b0 & 0x80) != 0;
-  ws->opcode = b0 & 0x0F;
-  ws->masked = (b1 & 0x80) != 0;
-  len7 = b1 & 0x7F;
+  ws->fin = (b0 & FIN_BIT) != 0;
+  ws->opcode = b0 & OPCODE_MASK;
+  ws->masked = (b1 & MASK_BIT) != 0;
+  len7 = b1 & LEN7_MASK;
 
-  if ((b0 & 0x70) != 0) {
+  if ((b0 & RSV_MASK) != 0) {
     return fail(ws, SWSC_ERR_PROTOCOL, SWSC_CLOSE_PROTOCOL, "rsv nonzero");
   }
   if (!is_known_opcode(ws->opcode)) {
@@ -465,20 +486,20 @@ static int on_frame_header(swsc *ws) {
                 "masked server frame");
   }
 
-  if (len7 == 126) {
-    plen = rd16(ws->hdr + 2);
-    off = 4;
-    if (plen <= 125) {
+  if (len7 == LEN16) {
+    plen = rd16(ws->hdr + HDR_BASE);
+    off = HDR_BASE + LEN16_EXT;
+    if (plen <= SWSC_CTRL_MAX) {
       return fail(ws, SWSC_ERR_PROTOCOL, SWSC_CLOSE_PROTOCOL,
                   "non-minimal length");
     }
-  } else if (len7 == 127) {
-    plen = rd64(ws->hdr + 2);
-    off = 10;
-    if (plen & 0x8000000000000000ull) {
+  } else if (len7 == LEN64) {
+    plen = rd64(ws->hdr + HDR_BASE);
+    off = HDR_BASE + LEN64_EXT;
+    if (plen & LEN64_MSB) {
       return fail(ws, SWSC_ERR_PROTOCOL, SWSC_CLOSE_PROTOCOL, "length msb");
     }
-    if (plen <= 0xFFFFull) {
+    if (plen <= UINT16_MAX) {
       return fail(ws, SWSC_ERR_PROTOCOL, SWSC_CLOSE_PROTOCOL,
                   "non-minimal length");
     }
@@ -487,7 +508,7 @@ static int on_frame_header(swsc *ws) {
   }
 
   if (ws->masked) {
-    memcpy(ws->mask_key, ws->hdr + off, 4);
+    memcpy(ws->mask_key, ws->hdr + off, MASK_LEN);
   }
 
   if (is_control(ws->opcode)) {
@@ -525,7 +546,7 @@ static int on_frame_header(swsc *ws) {
   if (plen == 0) {
     ws->st = ST_HDR;
     ws->hdr_got = 0;
-    ws->hdr_need = 2;
+    ws->hdr_need = HDR_BASE;
     return dispatch_empty_or_start(ws);
   }
 
@@ -551,10 +572,12 @@ static int on_payload_bytes(swsc *ws, const uint8_t *src, size_t n) {
     memcpy(tmp, src + off, chunk);
     if (ws->masked) {
       for (i = 0; i < chunk; i++) {
-        tmp[i] = (uint8_t)(tmp[i] ^ ws->mask_key[(ws->mask_off + i) & 3]);
+        tmp[i] =
+            (uint8_t)(tmp[i] ^
+                      ws->mask_key[(ws->mask_off + i) & (MASK_LEN - 1)]);
       }
     }
-    ws->mask_off = (ws->mask_off + (unsigned)chunk) & 3;
+    ws->mask_off = (ws->mask_off + (unsigned)chunk) & (MASK_LEN - 1);
 
     if (is_control(ws->opcode)) {
       memcpy(ws->ctrl + ws->ctrl_len, tmp, chunk);
@@ -580,7 +603,7 @@ static int on_payload_bytes(swsc *ws, const uint8_t *src, size_t n) {
 static int on_payload_done(swsc *ws) {
   ws->st = ST_HDR;
   ws->hdr_got = 0;
-  ws->hdr_need = 2;
+  ws->hdr_need = HDR_BASE;
   if (is_control(ws->opcode)) {
     return on_control(ws);
   }
@@ -597,8 +620,8 @@ static int parse_in(swsc *ws) {
     if (ws->st == ST_HDR) {
       size_t need, take;
       int rc;
-      if (ws->hdr_got < 2) {
-        ws->hdr_need = 2;
+      if (ws->hdr_got < HDR_BASE) {
+        ws->hdr_need = HDR_BASE;
       }
       need = ws->hdr_need;
       take = need - ws->hdr_got;
@@ -608,7 +631,7 @@ static int parse_in(swsc *ws) {
       memcpy(ws->hdr + ws->hdr_got, ws->in, take);
       ws->hdr_got += take;
       in_consume(ws, take);
-      if (ws->hdr_got >= 2) {
+      if (ws->hdr_got >= HDR_BASE) {
         ws->hdr_need = (size_t)header_len(ws->hdr[1]);
       }
       if (ws->hdr_got < ws->hdr_need) {
@@ -660,7 +683,7 @@ static swsc *create(bool client, uint32_t (*rng)(void *), void *rng_ctx) {
   ws->rng_ctx = rng_ctx;
   ws->rng_state = 0xC0FFEEu ^ (uint32_t)(uintptr_t)ws;
   ws->st = ST_HDR;
-  ws->hdr_need = 2;
+  ws->hdr_need = HDR_BASE;
   ws->close_code = SWSC_CLOSE_NO_STATUS;
   return ws;
 }
@@ -767,7 +790,7 @@ swsc_bytes swsc_pong_frame(swsc *ws, const uint8_t *data, size_t len) {
 
 swsc_bytes swsc_close_frame(swsc *ws, uint16_t code, const uint8_t *reason,
                             size_t reason_len) {
-  uint8_t payload[125];
+  uint8_t payload[SWSC_CTRL_MAX];
   size_t plen;
   bug(ws != NULL);
   bug(!ws->close_sent);
@@ -776,13 +799,13 @@ swsc_bytes swsc_close_frame(swsc *ws, uint16_t code, const uint8_t *reason,
     return encode_app(ws, true, SWSC_OP_CLOSE, NULL, 0);
   }
   bug(swsc_close_code_valid(code));
-  bug(reason_len <= 123);
+  bug(reason_len <= SWSC_REASON_MAX);
   wr16(payload, code);
-  plen = 2;
+  plen = SWSC_CLOSE_CODE_LEN;
   if (reason_len) {
     check_text(reason, reason_len);
-    memcpy(payload + 2, reason, reason_len);
-    plen = 2 + reason_len;
+    memcpy(payload + SWSC_CLOSE_CODE_LEN, reason, reason_len);
+    plen = SWSC_CLOSE_CODE_LEN + reason_len;
   }
   return encode_app(ws, true, SWSC_OP_CLOSE, payload, plen);
 }

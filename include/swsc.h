@@ -16,6 +16,10 @@
 #define SWSC_VERSION_MINOR 1
 #define SWSC_VERSION_PATCH 0
 
+#define SWSC_CTRL_MAX 125 /**< 7-bit length and control payload max. */
+#define SWSC_CLOSE_CODE_LEN 2
+#define SWSC_REASON_MAX (SWSC_CTRL_MAX - SWSC_CLOSE_CODE_LEN)
+
 /**
  * @brief Peer or resource failures. Programming errors abort; there is no
  *        invalid-argument code.
@@ -134,7 +138,7 @@ swsc_bytes swsc_text_frame(swsc *ws, const uint8_t *data, size_t len);
 swsc_bytes swsc_bin_frame(swsc *ws, const uint8_t *data, size_t len);
 
 /**
- * @param data At most 125 bytes. Allowed between fragments.
+ * @param data At most #SWSC_CTRL_MAX bytes. Allowed between fragments.
  * @return Encoded bytes, or empty on OOM. Invalid after the next frame helper
  *         on @p ws.
  */
@@ -143,7 +147,7 @@ swsc_bytes swsc_ping_frame(swsc *ws, const uint8_t *data, size_t len);
 /**
  * @brief Unsolicited Pong. Inbound Ping is already answered in swsc_feed @c
  * out.
- * @param data At most 125 bytes. Allowed between fragments.
+ * @param data At most #SWSC_CTRL_MAX bytes. Allowed between fragments.
  * @return Encoded bytes, or empty on OOM. Invalid after the next frame helper
  *         on @p ws.
  */
@@ -153,7 +157,7 @@ swsc_bytes swsc_pong_frame(swsc *ws, const uint8_t *data, size_t len);
  * @brief Initiate Close. Inbound Close is already echoed in swsc_feed @c out.
  * @param code 0 encodes an empty payload. Otherwise a wire-legal code
  *             (#swsc_close_code_valid).
- * @param reason Ignored if @p code is 0; at most 123 UTF-8 bytes.
+ * @param reason Ignored if @p code is 0; at most #SWSC_REASON_MAX UTF-8 bytes.
  * @return Encoded bytes, or empty on OOM. Invalid after the next frame helper
  *         on @p ws.
  */
