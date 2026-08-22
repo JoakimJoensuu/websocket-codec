@@ -65,6 +65,7 @@ masks. Servers never mask.
 include/swsf.h      public API
 src/swsf.c          framer
 src/utf8.c          streaming UTF-8
+tests/test_swsf.c   unit tests
 examples/hello.c    in-memory client + server
 ```
 
