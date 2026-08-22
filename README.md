@@ -39,6 +39,7 @@ swsf_result in = swsf_feed(srv, b.p, b.n);
 
 On a real connection, `send()` the frame bytes and `in.out`; `feed` takes
 bytes from `recv()`. Copy helper bytes if `send()` can short-write.
+`examples/echo_server.c` is the Autobahn testee after the HTTP upgrade.
 
 A later `swsf_*_frame` / `swsf_fragment*` on the same session invalidates the
 previous helper’s `swsf_bytes`. Copy if you need to hold them. `swsf_feed`’s
@@ -59,14 +60,37 @@ masks. Servers never mask.
 | Fail Close, Pong for Ping, Close echo | Unsolicited Ping / Pong, initiating Close |
 | | Send queue (`swsq`) |
 
+Autobahn cases 12.* and 13.* (compression) are excluded for that reason.
+
+## Autobahn Testsuite
+
+`examples/echo_server.c` is a POSIX echo **testee**: it performs the HTTP
+upgrade, then speaks only through `swsf`. That is the intended split.
+
+```sh
+cmake -B build && cmake --build build --target echo_server
+./scripts/run-autobahn.sh
+```
+
+The script starts the echo server on port 9001 and runs
+`crossbario/autobahn-testsuite` in `fuzzingclient` mode (Docker), or `wstest`
+if that is on `PATH`. Reports land in `autobahn/reports/servers/`.
+
+Config: `autobahn/fuzzingclient.json` (host) and
+`autobahn/fuzzingclient.docker.json` (container paths). Compression cases
+`12.*` / `13.*` are excluded.
+
 ## Layout
 
 ```
 include/swsf.h      public API
 src/swsf.c          framer
 src/utf8.c          streaming UTF-8
-tests/test_swsf.c   unit tests
-examples/hello.c    in-memory client + server
+tests/test_swsf.c         unit tests
+examples/hello.c         in-memory client + server
+examples/echo_server.c   Autobahn testee (HTTP + sockets)
+autobahn/                fuzzingclient specs
+scripts/run-autobahn.sh
 ```
 
 Apache-2.0. See `LICENSE`.
