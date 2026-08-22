@@ -13,15 +13,7 @@ Tools and other files refer to it, or say nothing.
 
 ## Errors
 
-Programming errors abort. Do not return an error, and do not use an
-assertion that is compiled out.
-
-That includes a missing required value, a length with no buffer, and any
-other caller-contract violation. A destroy function is the exception: it
-accepts a missing value, same as deallocation.
-
-Expected failures still return an error: out of memory, and peer or
-resource failures. Do not add an invalid-argument error.
+Programming errors abort, expected failures still return an error.
 
 ## Names
 
