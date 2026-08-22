@@ -4,7 +4,7 @@
 *.so
 *.dylib
 *.exe
-test_swsf
+test_swsc
 hello
 echo_server
 threaded
