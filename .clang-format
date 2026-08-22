@@ -1,1 +1,3 @@
 BasedOnStyle: LLVM
+UseTab: ForIndentation
+IndentWidth: 8
