@@ -1,4 +1,5 @@
 Checks: '*'
 WarningsAsErrors: '*'
 HeaderFilterRegex: '.*'
+FormatStyle: file
 ExtraArgsBefore: [-xc]
