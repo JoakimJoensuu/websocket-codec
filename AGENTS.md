@@ -17,12 +17,10 @@ to find and quote. Do not edit until it is accepted; a direct request
 already counts. Edit in its own commit.
 
 When the user's input states or implies a standing practice, say how we
-write it, in wording another repository could reuse. That includes all
-writing in the codebase. A correction counts when it is how that kind of
-thing should always be done. "Don't return an error code for a caller
-bug" is a convention; "don't write the same fact in two places" is a
-convention; "call this one `len`" is not. One instance is enough to
-propose, not to record.
+write it, in wording another repository could reuse. A correction counts
+when it is how that kind of thing should always be done. "Don't return an
+error code for a caller bug" is a convention; "call this one `len`" is
+not. One instance is enough to propose, not to record.
 
 ## When a document is wrong
 
