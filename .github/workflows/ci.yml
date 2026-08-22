@@ -1,0 +1,28 @@
+name: ci
+
+on:
+  push:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  style:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: cpp-linter/cpp-linter-action@v2
+        id: linter
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          version: "18"
+          style: file
+          tidy-checks: ""
+          extensions: c,h
+          files-changed-only: false
+          ignore: ".github|build"
+      - name: Fail if style checks failed
+        if: steps.linter.outputs.checks-failed > 0
+        run: exit 1
