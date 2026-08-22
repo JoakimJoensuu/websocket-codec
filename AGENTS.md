@@ -6,6 +6,8 @@ Read and follow:
 They apply to the files and commits you write. If a change goes against a
 convention, say so; if it is meant to stand, propose the replacement.
 
+Do not attribute a commit or pull request to a tool or agent.
+
 When the user's input states or implies a standing practice, propose how
 we write it, in wording another repository could reuse. A correction counts
 when it is how that kind of thing should always be done. One instance
