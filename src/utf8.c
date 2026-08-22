@@ -1,5 +1,6 @@
 #include "utf8.h"
 
+#include <stddef.h>
 #include <stdint.h>
 
 void utf8_init(utf8 *u) {
