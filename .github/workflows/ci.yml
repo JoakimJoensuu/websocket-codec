@@ -17,8 +17,7 @@ jobs:
       pull-requests: read
     steps:
       - uses: actions/checkout@v5
-      - name: Configure
-        run: cmake -B build
+      - run: cmake -B build
       - uses: cpp-linter/cpp-linter-action@v2
         id: linter
         env:
@@ -30,17 +29,13 @@ jobs:
           database: build
           file-annotations: false
           step-summary: true
-      - name: Fail if style checks failed
-        if: steps.linter.outputs.checks-failed > 0
+      - if: steps.linter.outputs.checks-failed > 0
         run: exit 1
 
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-      - name: Configure
-        run: cmake -B build
-      - name: Build
-        run: cmake --build build
-      - name: Test
-        run: ctest --test-dir build --output-on-failure
+      - run: cmake -B build
+      - run: cmake --build build
+      - run: ctest --test-dir build --output-on-failure
