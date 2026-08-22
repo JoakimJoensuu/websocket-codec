@@ -21,7 +21,7 @@ In libraries, prefix only what is exposed.
 
 ## Names
 
-Prefix only what the header exposes. File-local names in a `.c` have no prefix.
+In libraries, prefix only what is exposed.
 
 ## Functions
 
