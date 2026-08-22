@@ -1,5 +1,7 @@
 # Agents
 
+## Conventions
+
 Read and follow:
 - [CONVENTIONS.md](CONVENTIONS.md)
 
@@ -11,7 +13,7 @@ we write it, in wording another repository could reuse. A correction counts
 when it is how that kind of thing should always be done. One instance
 is enough to propose.
 
-## Proposing a change
+### Proposing a change
 
 Every change to these documents needs approval first: a new convention, a
 replacement, a document added to the list, a link that no longer points
@@ -20,7 +22,7 @@ proposal last in your reply under the heading "Proposed", so it is easy
 to find and quote. Do not edit until it is accepted; a direct request
 already counts. Edit in its own commit.
 
-## Contradictions in existing files
+### Contradictions in existing files
 
 If something existing contradicts a convention, the existing thing is
 wrong. Do not change the convention to match. Propose a fix as described
