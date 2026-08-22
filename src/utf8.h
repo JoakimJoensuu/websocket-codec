@@ -10,8 +10,8 @@
 #include <stdint.h>
 
 typedef struct utf8 {
-    uint32_t codep;
-    int need; /**< Remaining continuation bytes; 0 if idle. */
+  uint32_t codep;
+  int need; /**< Remaining continuation bytes; 0 if idle. */
 } utf8;
 
 void utf8_init(utf8 *u);

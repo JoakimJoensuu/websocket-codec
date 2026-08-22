@@ -21,45 +21,45 @@
  *        invalid-argument code.
  */
 typedef enum {
-    SWSC_OK = 0,
-    SWSC_ERR_NOMEM = -1,
-    SWSC_ERR_PROTOCOL = -2,
-    SWSC_ERR_UTF8 = -3,
-    SWSC_ERR_CLOSED = -4 /**< Further input after Close. */
+  SWSC_OK = 0,
+  SWSC_ERR_NOMEM = -1,
+  SWSC_ERR_PROTOCOL = -2,
+  SWSC_ERR_UTF8 = -3,
+  SWSC_ERR_CLOSED = -4 /**< Further input after Close. */
 } swsc_err;
 
 typedef enum {
-    SWSC_OP_CONT = 0x0,
-    SWSC_OP_TEXT = 0x1,
-    SWSC_OP_BIN = 0x2,
-    SWSC_OP_CLOSE = 0x8,
-    SWSC_OP_PING = 0x9,
-    SWSC_OP_PONG = 0xA
+  SWSC_OP_CONT = 0x0,
+  SWSC_OP_TEXT = 0x1,
+  SWSC_OP_BIN = 0x2,
+  SWSC_OP_CLOSE = 0x8,
+  SWSC_OP_PING = 0x9,
+  SWSC_OP_PONG = 0xA
 } swsc_opcode;
 
 /** @brief 1005/1006/1015 are never sent on the wire. */
 typedef enum {
-    SWSC_CLOSE_NORMAL = 1000,
-    SWSC_CLOSE_GOING_AWAY = 1001,
-    SWSC_CLOSE_PROTOCOL = 1002,
-    SWSC_CLOSE_UNSUPPORTED = 1003,
-    SWSC_CLOSE_NO_STATUS = 1005,
-    SWSC_CLOSE_ABNORMAL = 1006,
-    SWSC_CLOSE_INVALID_DATA = 1007,
-    SWSC_CLOSE_POLICY = 1008,
-    SWSC_CLOSE_TOO_BIG = 1009,
-    SWSC_CLOSE_MANDATORY_EXT = 1010,
-    SWSC_CLOSE_INTERNAL = 1011
+  SWSC_CLOSE_NORMAL = 1000,
+  SWSC_CLOSE_GOING_AWAY = 1001,
+  SWSC_CLOSE_PROTOCOL = 1002,
+  SWSC_CLOSE_UNSUPPORTED = 1003,
+  SWSC_CLOSE_NO_STATUS = 1005,
+  SWSC_CLOSE_ABNORMAL = 1006,
+  SWSC_CLOSE_INVALID_DATA = 1007,
+  SWSC_CLOSE_POLICY = 1008,
+  SWSC_CLOSE_TOO_BIG = 1009,
+  SWSC_CLOSE_MANDATORY_EXT = 1010,
+  SWSC_CLOSE_INTERNAL = 1011
 } swsc_close_code;
 
 typedef enum {
-    SWSC_EV_NONE = 0,
-    SWSC_EV_TEXT,
-    SWSC_EV_BIN,
-    SWSC_EV_PING,
-    SWSC_EV_PONG,
-    SWSC_EV_CLOSE,
-    SWSC_EV_ERROR /**< A Close frame is usually in swsc_result.out. */
+  SWSC_EV_NONE = 0,
+  SWSC_EV_TEXT,
+  SWSC_EV_BIN,
+  SWSC_EV_PING,
+  SWSC_EV_PONG,
+  SWSC_EV_CLOSE,
+  SWSC_EV_ERROR /**< A Close frame is usually in swsc_result.out. */
 } swsc_event_kind;
 
 /**
@@ -69,8 +69,8 @@ typedef enum {
  * helper fails (OOM). A successful frame is never empty: it includes a header.
  */
 typedef struct swsc_bytes {
-    const uint8_t *p;
-    size_t n;
+  const uint8_t *p;
+  size_t n;
 } swsc_bytes;
 
 /**
@@ -80,17 +80,17 @@ typedef struct swsc_bytes {
  * until the next swsc_feed or swsc_destroy. Frame helpers do not invalidate it.
  */
 typedef struct swsc_event {
-    swsc_event_kind kind;
-    const uint8_t *data;
-    size_t len;
-    uint16_t close_code; /**< SWSC_EV_CLOSE and SWSC_EV_ERROR. */
+  swsc_event_kind kind;
+  const uint8_t *data;
+  size_t len;
+  uint16_t close_code; /**< SWSC_EV_CLOSE and SWSC_EV_ERROR. */
 } swsc_event;
 
 typedef struct swsc_result {
-    swsc_err err;
-    const swsc_event *evs;
-    size_t n;
-    swsc_bytes out; /**< Pong, Close echo, and fail Close from this parse. */
+  swsc_err err;
+  const swsc_event *evs;
+  size_t n;
+  swsc_bytes out; /**< Pong, Close echo, and fail Close from this parse. */
 } swsc_result;
 
 typedef struct swsc swsc;
@@ -141,7 +141,8 @@ swsc_bytes swsc_bin_frame(swsc *ws, const uint8_t *data, size_t len);
 swsc_bytes swsc_ping_frame(swsc *ws, const uint8_t *data, size_t len);
 
 /**
- * @brief Unsolicited Pong. Inbound Ping is already answered in swsc_feed @c out.
+ * @brief Unsolicited Pong. Inbound Ping is already answered in swsc_feed @c
+ * out.
  * @param data At most 125 bytes. Allowed between fragments.
  * @return Encoded bytes, or empty on OOM. Invalid after the next frame helper
  *         on @p ws.
@@ -157,7 +158,7 @@ swsc_bytes swsc_pong_frame(swsc *ws, const uint8_t *data, size_t len);
  *         on @p ws.
  */
 swsc_bytes swsc_close_frame(swsc *ws, uint16_t code, const uint8_t *reason,
-                          size_t reason_len);
+                            size_t reason_len);
 
 /**
  * @brief FIN=0 piece of a message.
@@ -168,7 +169,8 @@ swsc_bytes swsc_close_frame(swsc *ws, uint16_t code, const uint8_t *reason,
  * @return Encoded bytes, or empty on OOM. Invalid after the next frame helper
  *         on @p ws.
  */
-swsc_bytes swsc_fragment(swsc *ws, swsc_opcode opcode, const uint8_t *data, size_t len);
+swsc_bytes swsc_fragment(swsc *ws, swsc_opcode opcode, const uint8_t *data,
+                         size_t len);
 
 /**
  * @brief CONT + FIN=1; ends the message started with swsc_fragment.

@@ -17,6 +17,8 @@ jobs:
       pull-requests: read
     steps:
       - uses: actions/checkout@v5
+      - name: Compile commands
+        run: cmake -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
       - uses: cpp-linter/cpp-linter-action@v2
         id: linter
         env:
@@ -25,6 +27,7 @@ jobs:
           version: "22"
           style: file
           tidy-checks: ""
+          database: build
           file-annotations: false
       - name: Fail if style checks failed
         if: steps.linter.outputs.checks-failed > 0
