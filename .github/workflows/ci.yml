@@ -13,7 +13,7 @@ jobs:
   style:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
       pull-requests: read
     steps:
       - uses: actions/checkout@v5
@@ -29,7 +29,8 @@ jobs:
           tidy-checks: ""
           database: build
           file-annotations: false
-          step-summary: true
+          thread-comments: ${{ github.event_name == 'pull_request' && 'update' }}
+          step-summary: ${{ github.event_name != 'pull_request' }}
       - name: Fail if style checks failed
         if: steps.linter.outputs.checks-failed > 0
         run: exit 1
