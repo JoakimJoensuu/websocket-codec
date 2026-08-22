@@ -42,7 +42,11 @@ implementation.
 ## Commits and PRs
 
 A title must complete "This commit/PR will …" with what the change
-does to the files, not what those files do or say afterwards.
+does to the files, not what those files do or say afterwards. Do not
+end it with a period.
+
+A body describes or reasons the change when that is needed. Otherwise
+leave it empty.
 
 An open PR's title and body describe the current diff, not an earlier
 one. Update them when the files change.
