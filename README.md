@@ -2,7 +2,7 @@
 
 Platform-independent, sans-I/O RFC 6455 WebSocket **codec** in C
 (sections 5–7): framing, masking, fragmentation, ping/pong, the closing
-handshake, and UTF-8 checks on text. Hosted C99 (`malloc`); no sockets.
+handshake, and UTF-8 checks on text. Hosted C23 (`malloc`); no sockets.
 
 It does **not** implement HTTP, TCP, TLS, the opening handshake (section 4),
 or a send queue. After `101 Switching Protocols`, feed bytes from the socket
