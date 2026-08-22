@@ -11,6 +11,18 @@ Keep it short. Commit and PR titles too.
 Do not write the same fact in two places. One source of truth.
 Tools and other files refer to it, or say nothing.
 
+## Errors
+
+Programming errors abort. Do not return an error, and do not use an
+assertion that is compiled out.
+
+That includes a missing required value, a length with no buffer, and any
+other caller-contract violation. A destroy function is the exception: it
+accepts a missing value, same as deallocation.
+
+Expected failures still return an error: out of memory, and peer or
+resource failures. Do not add an invalid-argument error.
+
 ## Names
 
 In libraries, prefix only what is exposed.
@@ -22,22 +34,8 @@ functions. A flag on one operation is fine.
 
 ## Comments
 
-Comment only what names, types, and control flow cannot say.
-
-## C
-
-Programming errors abort. Do not return an error code, and do not use
-`assert` (that disappears under `NDEBUG`). Call `abort()`.
-
-That includes NULL where a pointer is required, a positive length with a
-NULL buffer, and any other caller-contract violation. A destroy function
-is the exception: it accepts NULL, same as `free`.
-
-Expected failures still return an error code: out of memory, and peer or
-resource failures. Do not add an invalid-argument code.
-
-When a public declaration needs a comment, write it as a documentation
-comment on the header, not on the `.c` definition.
+Comment only what names, types, and control flow cannot say. When a public
+declaration needs a comment, write it there, not on the definition.
 
 ## Tests
 
