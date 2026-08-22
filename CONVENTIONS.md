@@ -43,3 +43,6 @@ implementation.
 
 A title must complete "This commit/PR will …" with what the change
 does to the files, not what those files do or say afterwards.
+
+An open PR's title and body describe the current diff, not an earlier
+one. Update them when the files change.
