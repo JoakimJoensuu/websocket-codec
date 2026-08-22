@@ -71,9 +71,16 @@ add_executable(hello examples/hello.c)
 target_link_libraries(hello PRIVATE swsf)
 target_compile_options(hello PRIVATE -Wall -Wextra -Wpedantic)
 
+add_executable(echo_server examples/echo_server.c)
+target_link_libraries(echo_server PRIVATE swsf)
+target_compile_options(echo_server PRIVATE -Wall -Wextra -Wpedantic)
+
 include(CTest)
 add_test(NAME unit COMMAND test_swsf)
 add_test(NAME hello COMMAND hello)
+add_test(NAME smoke_echo COMMAND python3 ${CMAKE_SOURCE_DIR}/tests/smoke_echo.py)
+set_tests_properties(smoke_echo PROPERTIES
+  ENVIRONMENT "ECHO_SERVER=$<TARGET_FILE:echo_server>;PORT=19001")
 
 install(TARGETS swsf EXPORT swsfTargets
   ARCHIVE DESTINATION lib
@@ -82,7 +89,7 @@ install(FILES include/swsf.h DESTINATION include)
 
 option(SWSF_SANITIZE "Build with ASan/UBSan" OFF)
 if(SWSF_SANITIZE)
-  foreach(tgt swsf test_swsf hello)
+  foreach(tgt swsf test_swsf hello echo_server)
     target_compile_options(${tgt} PRIVATE -fsanitize=address,undefined -fno-omit-frame-pointer)
     target_link_options(${tgt} PRIVATE -fsanitize=address,undefined)
   endforeach()

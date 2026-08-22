@@ -40,3 +40,20 @@ jobs:
         run: cmake --build build
       - name: Test
         run: ctest --test-dir build --output-on-failure
+
+  autobahn:
+    runs-on: ubuntu-latest
+    needs: unit
+    steps:
+      - uses: actions/checkout@v5
+      - name: Build echo server
+        run: cmake -B build && cmake --build build --target echo_server
+      - name: Autobahn fuzzingclient
+        run: ./scripts/run-autobahn.sh
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: autobahn-report
+          path: autobahn/reports
+          if-no-files-found: ignore
