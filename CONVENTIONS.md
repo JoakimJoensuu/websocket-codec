@@ -4,7 +4,7 @@ Not language or protocol standards.
 
 ## Writing
 
-Keep it short. Commit titles too.
+Keep it short. Commit and PR titles too.
 
 ## Errors
 
@@ -34,7 +34,8 @@ header, not on the `.c` definition.
 Assert observable behaviour through the public API, not internal
 implementation.
 
-## Commits
+## Commits and PRs
 
-The title says what the commit does, not what the program does afterwards.
-It must complete the sentence "This commit will …".
+The title says what the change does, not what the program does afterwards.
+A commit title must complete "This commit will …". A PR title must
+complete "This PR will …".
