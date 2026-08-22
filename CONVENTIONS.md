@@ -6,6 +6,11 @@ Not language or protocol standards.
 
 Keep it short. Commit titles too.
 
+## Source of truth
+
+Do not write the same fact in two places. One source of truth.
+Tools and other files refer to it, or say nothing.
+
 ## Errors
 
 Programming errors abort. Do not return an error code, and do not use
