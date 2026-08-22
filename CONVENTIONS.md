@@ -25,7 +25,7 @@ resource failures. Do not add an invalid-argument code.
 
 ## Names
 
-Prefix only what the header exposes. File-local names in a `.c` have no prefix.
+In libraries, prefix only what is exposed.
 
 ## Functions
 
