@@ -17,7 +17,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          version: "18"
+          version: "22"
           style: file
           tidy-checks: ""
           extensions: c,h
