@@ -41,6 +41,5 @@ implementation.
 
 ## Commits and PRs
 
-The title says what the change does, not what the program does or a
-document states afterwards. A title must complete the sentence
-"This commit/PR will …".
+A title must complete "This commit/PR will …" with what the change
+does to the files, not what those files do or say afterwards.
