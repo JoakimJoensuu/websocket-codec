@@ -1,9 +1,11 @@
-# C99. '*' turns on C++, FPGA, and LLVM-libc rules this tree cannot pass.
+# C. '*' turns on C++, FPGA, and LLVM-libc rules this tree cannot pass.
 # identifier-length fights CONVENTIONS.md "Keep it short".
 # implicit-bool-conversion is a C++ check: C comparisons yield int.
+# Annex K memcpy_s is not in this hosted libc.
 Checks: >
   -*,
   clang-analyzer-*,
+  -clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling,
   clang-diagnostic-*,
   -clang-diagnostic-gcc-install-dir-libstdcxx,
   bugprone-*,
