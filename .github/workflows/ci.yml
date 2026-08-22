@@ -14,8 +14,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-      - name: Compile commands
-        run: cmake -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+      - name: Configure
+        run: cmake -B build
       - name: Install clang-format-22 and clang-tidy-22
         run: |
           . /etc/os-release
