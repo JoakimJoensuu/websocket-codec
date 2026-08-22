@@ -23,6 +23,10 @@ is the exception: it accepts NULL, same as `free`.
 Expected failures still return an error code: out of memory, and peer or
 resource failures. Do not add an invalid-argument code.
 
+## Names
+
+Prefix only what the header exposes. File-local names in a `.c` have no prefix.
+
 ## Functions
 
 Do not use a boolean parameter to choose between two operations. Use two
