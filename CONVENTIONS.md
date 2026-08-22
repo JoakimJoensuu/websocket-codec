@@ -38,3 +38,5 @@ implementation.
 
 The title says what the commit does, not what the program does afterwards.
 It must complete the sentence "This commit will …".
+
+Do not attribute a commit or pull request to a tool or agent.
