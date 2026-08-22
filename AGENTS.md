@@ -22,7 +22,7 @@ replacement, a document added to the list, a link that no longer points
 anywhere. Do not wait for an answer. Finish the task, then put the
 proposal last in your reply under the heading "Proposed", so it is easy
 to find and quote. Do not edit until it is accepted; a direct request
-already counts. Edit in its own commit.
+already counts.
 
 ### Contradictions in existing files
 

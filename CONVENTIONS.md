@@ -13,15 +13,11 @@ Tools and other files refer to it, or say nothing.
 
 ## Errors
 
-Programming errors abort. Do not return an error code, and do not use
-`assert` (that disappears under `NDEBUG`). Call `abort()`.
+Programming errors abort, expected failures still return an error.
 
-That includes NULL where a pointer is required, a positive length with a
-NULL buffer, and any other caller-contract violation. A destroy function
-is the exception: it accepts NULL, same as `free`.
+## Names
 
-Expected failures still return an error code: out of memory, and peer or
-resource failures. Do not add an invalid-argument code.
+In libraries, prefix only what is exposed.
 
 ## Functions
 
@@ -31,8 +27,7 @@ functions. A flag on one operation is fine.
 ## Comments
 
 Comment only what names, types, and control flow cannot say. When a public
-declaration needs a comment, write it as a documentation comment on the
-header, not on the `.c` definition.
+declaration needs a comment, write it there, not on the definition.
 
 ## Tests
 
