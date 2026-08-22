@@ -26,7 +26,6 @@ jobs:
           style: file
           tidy-checks: ""
           file-annotations: false
-          database: build
       - name: Fail if style checks failed
         if: steps.linter.outputs.checks-failed > 0
         run: exit 1
