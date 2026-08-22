@@ -29,7 +29,7 @@ jobs:
           tidy-checks: ""
           database: build
           file-annotations: false
-          thread-comments: ${{ github.event_name == 'pull_request' && 'update' }}
+          thread-comments: ${{ github.event_name == 'pull_request' && 'true' }}
           step-summary: ${{ github.event_name != 'pull_request' }}
       - name: Fail if style checks failed
         if: steps.linter.outputs.checks-failed > 0
