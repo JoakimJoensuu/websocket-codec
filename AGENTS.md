@@ -4,6 +4,8 @@
 
 Read and follow:
 - [CONVENTIONS.md](CONVENTIONS.md)
+- [`.clang-format`](.clang-format)
+- [`.clang-tidy`](.clang-tidy)
 
 They apply to the files and commits you write. If a change goes against a
 convention, say so; if it is meant to stand, propose the replacement.
