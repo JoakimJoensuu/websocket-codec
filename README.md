@@ -40,6 +40,7 @@ swsf_result in = swsf_feed(srv, b.p, b.n);
 On a real connection, `send()` the frame bytes and `in.out`; `feed` takes
 bytes from `recv()`. Copy helper bytes if `send()` can short-write.
 `examples/echo_server.c` is the Autobahn testee after the HTTP upgrade.
+`examples/threaded.c` is a sketch of control-before-data until `swsq` exists.
 
 A later `swsf_*_frame` / `swsf_fragment*` on the same session invalidates the
 previous helper’s `swsf_bytes`. Copy if you need to hold them. `swsf_feed`’s
@@ -89,6 +90,7 @@ src/utf8.c          streaming UTF-8
 tests/test_swsf.c         unit tests
 examples/hello.c         in-memory client + server
 examples/echo_server.c   Autobahn testee (HTTP + sockets)
+examples/threaded.c      threads + send-order sketch (not the library)
 autobahn/                fuzzingclient specs
 scripts/run-autobahn.sh
 ```
