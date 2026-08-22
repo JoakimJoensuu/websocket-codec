@@ -1,5 +1,6 @@
 # C99. '*' turns on C++, FPGA, and LLVM-libc rules this tree cannot pass.
-# readability-identifier-length fights CONVENTIONS.md "Keep it short".
+# identifier-length fights CONVENTIONS.md "Keep it short".
+# implicit-bool-conversion is a C++ check: C comparisons yield int.
 Checks: >
   -*,
   clang-analyzer-*,
@@ -13,6 +14,7 @@ Checks: >
   readability-*,
   -readability-function-cognitive-complexity,
   -readability-identifier-length,
+  -readability-implicit-bool-conversion,
   -readability-isolate-declaration,
   -readability-magic-numbers,
   -readability-uppercase-literal-suffix
