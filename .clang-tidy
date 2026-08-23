@@ -2,7 +2,8 @@ Checks: >
   *,
   -llvmlibc-restrict-system-libc-headers,
   -altera-*,
-  -clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling
+  -clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling,
+  -llvm-header-guard
 WarningsAsErrors: '*'
 HeaderFilterRegex: '.*'
 FormatStyle: file
