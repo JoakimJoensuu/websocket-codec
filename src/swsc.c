@@ -182,7 +182,6 @@ static void clear_events(swsc *ws) {
   for (size_t i = 0; i < ws->ev_n; i++) {
     free((void *)ws->evs[i].data);
     ws->evs[i].data = nullptr;
-    ,
   }
   ws->ev_n = 0;
 }
