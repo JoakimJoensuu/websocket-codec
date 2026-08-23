@@ -55,7 +55,7 @@ jobs:
           set +e
           clang-format --dry-run --Werror $files | tee "$RUNNER_TEMP/format.log"
           fmt=${PIPESTATUS[0]}
-          clang-tidy -p build -j"$(nproc)" $files | tee "$RUNNER_TEMP/tidy.log"
+          clang-tidy -p build $files | tee "$RUNNER_TEMP/tidy.log"
           tidy=${PIPESTATUS[0]}
           set -e
           {
