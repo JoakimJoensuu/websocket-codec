@@ -20,7 +20,7 @@ jobs:
         id: clang
         with:
           path: ${{ runner.temp }}/clang
-          key: clang-23.1.0-${{ runner.os }}-tidy-format-v2
+          key: clang-23.1.0-${{ runner.os }}-tidy-format-v3
       - if: steps.clang.outputs.cache-hit != 'true'
         id: install
         run: |
@@ -40,11 +40,12 @@ jobs:
             | while read -r lib; do
                 cp -L "$lib" "$dest/lib/"
               done
+          cp -a /usr/lib/llvm-23/lib/clang "$dest/lib/"
       - if: steps.install.outcome == 'success'
         uses: actions/cache/save@v4
         with:
           path: ${{ runner.temp }}/clang
-          key: clang-23.1.0-${{ runner.os }}-tidy-format-v2
+          key: clang-23.1.0-${{ runner.os }}-tidy-format-v3
       - run: cmake -B build
       - run: |
           export PATH="${{ runner.temp }}/clang/bin:$PATH"
