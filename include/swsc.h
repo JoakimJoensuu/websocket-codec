@@ -12,13 +12,17 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#define SWSC_VERSION_MAJOR 0
-#define SWSC_VERSION_MINOR 1
-#define SWSC_VERSION_PATCH 0
+enum : int {
+  SWSC_VERSION_MAJOR = 0,
+  SWSC_VERSION_MINOR = 1,
+  SWSC_VERSION_PATCH = 0,
+};
 
-#define SWSC_CTRL_MAX 125 /**< 7-bit length and control payload max. */
-#define SWSC_CLOSE_CODE_LEN 2
-#define SWSC_REASON_MAX (SWSC_CTRL_MAX - SWSC_CLOSE_CODE_LEN)
+enum : uint8_t {
+  SWSC_CTRL_MAX = 125, /**< 7-bit length and control payload max. */
+  SWSC_CLOSE_CODE_LEN = 2,
+  SWSC_REASON_MAX = SWSC_CTRL_MAX - SWSC_CLOSE_CODE_LEN,
+};
 
 /**
  * @brief Peer or resource failures. Programming errors abort; there is no
