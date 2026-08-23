@@ -1,6 +1,10 @@
 # Conventions
 
-Not language or protocol standards.
+Name the language and protocol standards. Do not restate them.
+
+## Language
+
+ISO C23, hosted. No extensions.
 
 ## Writing
 
