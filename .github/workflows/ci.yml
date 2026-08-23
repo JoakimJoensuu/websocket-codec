@@ -14,18 +14,65 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      pull-requests: read
     steps:
       - uses: actions/checkout@v5
-      - uses: cpp-linter/cpp-linter-action@v2
-        id: linter
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/cache/restore@v4
+        id: clang
         with:
-          version: "22"
-          style: file
-          tidy-checks: ""
-          file-annotations: false
-      - name: Fail if style checks failed
-        if: steps.linter.outputs.checks-failed > 0
-        run: exit 1
+          path: ${{ runner.temp }}/clang
+          key: clang-23.1.0-${{ runner.os }}-tidy-format-v3
+      - if: steps.clang.outputs.cache-hit != 'true'
+        id: install
+        run: |
+          . /etc/os-release
+          wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key \
+            | sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/apt.llvm.org.gpg
+          echo "deb http://apt.llvm.org/${VERSION_CODENAME}/ llvm-toolchain-${VERSION_CODENAME}-23 main" \
+            | sudo tee /etc/apt/sources.list.d/llvm-23.list
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends clang-format-23 clang-tidy-23
+          dest="${{ runner.temp }}/clang"
+          mkdir -p "$dest/bin" "$dest/lib"
+          cp -L "$(command -v clang-tidy-23)" "$dest/bin/clang-tidy"
+          cp -L "$(command -v clang-format-23)" "$dest/bin/clang-format"
+          ldd "$dest/bin/clang-tidy" "$dest/bin/clang-format" \
+            | awk '/=> \//{print $3}' | sort -u \
+            | while read -r lib; do
+                cp -L "$lib" "$dest/lib/"
+              done
+          cp -a /usr/lib/llvm-23/lib/clang "$dest/lib/"
+      - if: steps.install.outcome == 'success'
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ runner.temp }}/clang
+          key: clang-23.1.0-${{ runner.os }}-tidy-format-v3
+      - run: cmake -B build
+      - run: |
+          export PATH="${{ runner.temp }}/clang/bin:$PATH"
+          export LD_LIBRARY_PATH="${{ runner.temp }}/clang/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+          clang-format --version
+          clang-tidy --version
+          sources=$(find include src examples -type f \( -name '*.c' -o -name '*.h' \) | sort)
+          units=$(jq -r '.[].file' compile_commands.json)
+          set +e
+          clang-format --dry-run --Werror $sources | tee "$RUNNER_TEMP/format.log"
+          fmt=${PIPESTATUS[0]}
+          clang-tidy --experimental-custom-checks $units | tee "$RUNNER_TEMP/tidy.log"
+          tidy=${PIPESTATUS[0]}
+          set -e
+          {
+            echo '## clang-format'
+            if [ "$fmt" -eq 0 ]; then echo ok; else echo '```'; cat "$RUNNER_TEMP/format.log"; echo '```'; fi
+            echo
+            echo '## clang-tidy'
+            if [ ! -s "$RUNNER_TEMP/tidy.log" ]; then echo ok; else echo '```'; cat "$RUNNER_TEMP/tidy.log"; echo '```'; fi
+          } >>"$GITHUB_STEP_SUMMARY"
+          test "$fmt" -eq 0 && test "$tidy" -eq 0
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - run: cmake -B build
+      - run: cmake --build build
+      - run: ctest --test-dir build --output-on-failure

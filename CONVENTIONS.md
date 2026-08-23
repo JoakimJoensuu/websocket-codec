@@ -23,6 +23,10 @@ Programming errors abort, expected failures still return an error.
 
 In libraries, prefix only what is exposed.
 
+Do not typedef structs or enums.
+
+Use `_cnt` for item counts and `_len` for sequence length.
+
 ## Functions
 
 Do not use a boolean parameter to choose between two operations. Use two

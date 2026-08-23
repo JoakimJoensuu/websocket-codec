@@ -4,11 +4,13 @@
 
 Read and follow:
 - [CONVENTIONS.md](CONVENTIONS.md)
-- [`.clang-format`](.clang-format)
-- [`.clang-tidy`](.clang-tidy)
+- [.clang-format](.clang-format)
+- [.clang-tidy](.clang-tidy)
+- [README.md](README.md)
 
-They apply to the files and commits you write. If a change goes against a
-convention, say so; if it is meant to stand, propose the replacement.
+They apply to the files and commits you write, and to how you work in this
+codebase. If a change goes against what they say, say so; if it is meant to
+stand, propose the replacement.
 
 When the user's input states or implies a standing practice, propose how
 we write it, in wording another repository could reuse. A correction counts
