@@ -186,8 +186,7 @@ static void clear_events(swsc *ws) {
   ws->ev_n = 0;
 }
 
-static int ev_push(swsc *ws, swsc_event ev) {
-  swsc_event *event = nullptr;
+static int ev_push(swsc *ws, swsc_event event) {
   uint8_t *copy = nullptr;
   if (ws->ev_n == ws->ev_cap) {
     size_t ncap = ws->ev_cap ? ws->ev_cap * 2 : EV_INIT;
@@ -202,17 +201,17 @@ static int ev_push(swsc *ws, swsc_event ev) {
     ws->evs = nbuf;
     ws->ev_cap = ncap;
   }
-  if (ev.len > 0) {
-    bug(ev.data != nullptr);
-    copy = (uint8_t *)malloc(ev.len);
+  if (event.len > 0) {
+    bug(event.data != nullptr);
+    copy = (uint8_t *)malloc(event.len);
     if (!copy) {
       return -1;
     }
-    memcpy(copy, ev.data, ev.len);
+    memcpy(copy, event.data, event.len);
   }
-  event = &ws->evs[ws->ev_n++];
-  *event = ev;
-  event->data = copy;
+  ws->evs[ws->ev_n] = event;
+  ws->evs[ws->ev_n].data = copy;
+  ws->ev_n++;
   return 0;
 }
 
