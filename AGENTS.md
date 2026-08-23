@@ -24,6 +24,9 @@ proposal last in your reply under the heading "Proposed", so it is easy
 to find and quote. Do not edit until it is accepted; a direct request
 already counts.
 
+An agent-suggested change that is not the current task goes on a
+new branch.
+
 ### Contradictions in existing files
 
 If something existing contradicts a convention, the existing thing is
