@@ -2,16 +2,17 @@
 #define UTF8_H
 
 /**
- * Incremental UTF-8 for RFC 6455 text. A code point may split across frames;
- * incomplete is OK until the message ends.
+ * Incremental well-formed UTF-8 (RFC 3629 §3) for RFC 6455 text. A code
+ * point may split across frames; incomplete is OK until the message ends.
  */
 
 #include <stddef.h>
 #include <stdint.h>
 
 typedef struct utf8 {
-  uint32_t codep;
-  int need; /**< Remaining continuation bytes; 0 if idle. */
+  int need; /**< Remaining octets after the first; 0 if idle. */
+  uint8_t next_min;
+  uint8_t next_max;
 } utf8;
 
 void utf8_init(utf8 *state);
