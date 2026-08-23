@@ -47,7 +47,7 @@ enum : unsigned {
 
 enum : unsigned { BYTE_BITS = CHAR_BIT };
 
-typedef enum { ST_HDR = 0, ST_PAYLOAD, ST_DEAD, } parse_st;
+typedef enum { ST_HDR = 0, ST_PAYLOAD, ST_DEAD } parse_st;
 
 struct swsc {
   uint32_t (*rng)(void *);
