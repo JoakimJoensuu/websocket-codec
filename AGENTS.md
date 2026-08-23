@@ -33,3 +33,6 @@ above. If files contradict themselves or each other, flag that too.
 ## Commits and pull requests
 
 Do not attribute a commit or pull request to a tool or agent.
+
+An agent-suggested change that is not the current task goes on a
+new branch.
