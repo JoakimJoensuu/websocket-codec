@@ -14,16 +14,13 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-    env:
-      CLANG: ${{ runner.temp }}/clang
-      CLANG_CACHE_KEY: clang-23.1.0-${{ runner.os }}-tidy-format
     steps:
       - uses: actions/checkout@v5
       - uses: actions/cache/restore@v4
         id: clang
         with:
-          path: ${{ env.CLANG }}
-          key: ${{ env.CLANG_CACHE_KEY }}
+          path: ${{ runner.temp }}/clang
+          key: clang-23.1.0-${{ runner.os }}-tidy-format
       - if: steps.clang.outputs.cache-hit != 'true'
         id: install
         run: |
@@ -34,29 +31,30 @@ jobs:
             | sudo tee /etc/apt/sources.list.d/llvm-23.list
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends clang-format-23 clang-tidy-23
-          mkdir -p "$CLANG/bin" "$CLANG/lib"
-          cp -L "$(command -v clang-tidy-23)" "$CLANG/bin/clang-tidy.real"
-          cp -L "$(command -v clang-format-23)" "$CLANG/bin/clang-format.real"
-          ldd "$CLANG/bin/clang-tidy.real" "$CLANG/bin/clang-format.real" \
+          dest="${{ runner.temp }}/clang"
+          mkdir -p "$dest/bin" "$dest/lib"
+          cp -L "$(command -v clang-tidy-23)" "$dest/bin/clang-tidy.real"
+          cp -L "$(command -v clang-format-23)" "$dest/bin/clang-format.real"
+          ldd "$dest/bin/clang-tidy.real" "$dest/bin/clang-format.real" \
             | awk '/=> \//{print $3}' | sort -u \
             | while read -r lib; do
-                cp -L "$lib" "$CLANG/lib/"
+                cp -L "$lib" "$dest/lib/"
               done
           for tool in clang-tidy clang-format; do
             printf '%s\n' '#!/bin/sh' \
               'd=$(CDPATH= cd -- "$(dirname "$0")" && pwd)' \
               'export LD_LIBRARY_PATH="$d/../lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"' \
-              "exec \"\$d/${tool}.real\" \"\$@\"" >"$CLANG/bin/$tool"
-            chmod +x "$CLANG/bin/$tool"
+              "exec \"\$d/${tool}.real\" \"\$@\"" >"$dest/bin/$tool"
+            chmod +x "$dest/bin/$tool"
           done
-      - if: always() && steps.install.outcome == 'success'
+      - if: steps.install.outcome == 'success'
         uses: actions/cache/save@v4
         with:
-          path: ${{ env.CLANG }}
-          key: ${{ env.CLANG_CACHE_KEY }}
+          path: ${{ runner.temp }}/clang
+          key: clang-23.1.0-${{ runner.os }}-tidy-format
       - run: cmake -B build
       - run: |
-          export PATH="$CLANG/bin:$PATH"
+          export PATH="${{ runner.temp }}/clang/bin:$PATH"
           files=$(find include src examples -type f \( -name '*.c' -o -name '*.h' \) | sort)
           set +e
           clang-format --dry-run --Werror $files >"$RUNNER_TEMP/format.log" 2>&1
