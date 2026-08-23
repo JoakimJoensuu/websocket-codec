@@ -18,12 +18,20 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - run: cmake -B build
+      - run: |
+          wget https://apt.llvm.org/llvm.sh -O "${{ runner.temp }}/llvm.sh"
+          chmod +x "${{ runner.temp }}/llvm.sh"
+          sudo "${{ runner.temp }}/llvm.sh" 23
+          sudo apt-get install -y clang-format-23 clang-tidy-23
+          mkdir -p "${{ runner.temp }}/clang/bin"
+          ln -s "$(command -v clang-tidy-23)" "${{ runner.temp }}/clang/bin/clang-tidy"
+          ln -s "$(command -v clang-format-23)" "${{ runner.temp }}/clang/bin/clang-format"
       - uses: cpp-linter/cpp-linter-action@v2
         id: linter
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          version: "22"
+          version: ${{ runner.temp }}/clang/bin
           style: file
           tidy-checks: ""
           database: build
