@@ -32,7 +32,7 @@ typedef enum {
   SWSC_ERR_CLOSED = -4 /**< Further input after Close. */
 } swsc_err;
 
-typedef enum {
+typedef enum : unsigned {
   SWSC_OP_CONT = 0x0,
   SWSC_OP_TEXT = 0x1,
   SWSC_OP_BIN = 0x2,
@@ -69,7 +69,7 @@ typedef enum {
 /**
  * @brief Encoded wire bytes.
  *
- * @c p is NULL and @c n is 0 when there is nothing to send, or when a frame
+ * @c p is nullptr and @c n is 0 when there is nothing to send, or when a frame
  * helper fails (OOM). A successful frame is never empty: it includes a header.
  */
 typedef struct swsc_bytes {
@@ -100,15 +100,15 @@ typedef struct swsc_result {
 typedef struct swsc swsc;
 
 /**
- * @param rng NULL uses an internal PRNG (not a CSPRNG). Clients mask every
+ * @param rng nullptr uses an internal PRNG (not a CSPRNG). Clients mask every
  *            outgoing frame.
- * @return Heap session, or NULL on OOM.
+ * @return Heap session, or nullptr on OOM.
  */
 swsc *swsc_create_client(uint32_t (*rng)(void *ctx), void *rng_ctx);
 
 /**
  * @brief Servers never mask.
- * @return Heap session, or NULL on OOM.
+ * @return Heap session, or nullptr on OOM.
  */
 swsc *swsc_create_server(void);
 
@@ -211,7 +211,7 @@ swsc_err swsc_error(const swsc *ws);
 uint16_t swsc_last_close(const swsc *ws);
 
 /**
- * @param ws May be NULL.
+ * @param ws May be nullptr.
  */
 void swsc_destroy(swsc *ws);
 

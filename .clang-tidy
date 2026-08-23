@@ -2,7 +2,10 @@ Checks: >
   *,
   -llvmlibc-restrict-system-libc-headers,
   -altera-*,
-  -hicpp-use-nullptr
 WarningsAsErrors: '*'
 HeaderFilterRegex: '.*'
 FormatStyle: file
+CheckOptions:
+  readability-identifier-length.IgnoredVariableNames: '^(ws|i)$'
+  readability-identifier-length.IgnoredParameterNames: '^ws$'
+  readability-implicit-bool-conversion.AllowLogicalOperatorConversion: true

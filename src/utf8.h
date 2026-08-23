@@ -14,12 +14,12 @@ typedef struct utf8 {
   int need; /**< Remaining continuation bytes; 0 if idle. */
 } utf8;
 
-void utf8_init(utf8 *u);
+void utf8_init(utf8 *state);
 
 /** 0 if still valid (including an incomplete sequence), -1 on reject. */
-int utf8_feed(utf8 *u, const uint8_t *p, size_t n);
+int utf8_feed(utf8 *state, const uint8_t *src, size_t len);
 
 /** 0 if idle, -1 if a sequence is unfinished. */
-int utf8_finish(const utf8 *u);
+int utf8_finish(const utf8 *state);
 
 #endif

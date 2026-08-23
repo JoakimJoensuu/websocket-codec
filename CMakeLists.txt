@@ -10,7 +10,7 @@ if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE Debug)
 endif()
 
-add_library(swsc src/swsc.c src/utf8.c)
+add_library(swsc src/swsc.c src/utf8.c src/rng.c src/bug.c)
 target_include_directories(swsc PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>)

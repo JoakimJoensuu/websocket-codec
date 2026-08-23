@@ -27,7 +27,7 @@ cmake -B build && cmake --build build && ctest --test-dir build
 ```c
 #include "swsc.h"
 
-swsc *cli = swsc_create_client(NULL, NULL);
+swsc *cli = swsc_create_client(nullptr, nullptr);
 swsc *srv = swsc_create_server();
 
 swsc_bytes b = swsc_text_frame(cli, (const uint8_t *)"hello", 5);
@@ -65,6 +65,7 @@ masks. Servers never mask.
 include/swsc.h      public API
 src/swsc.c          codec
 src/utf8.c          streaming UTF-8
+src/rng.c           default mask PRNG
 examples/hello.c    in-memory client + server
 ```
 
