@@ -1,6 +1,6 @@
 # Conventions
 
-Name the language and protocol standards. Do not restate them.
+Do not restate language or protocol standards.
 
 ## Language
 
