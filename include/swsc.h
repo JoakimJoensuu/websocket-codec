@@ -114,7 +114,7 @@ swsc *swsc_create_client(uint32_t (*rng)(void *ctx), void *rng_ctx);
  * @brief Servers never mask.
  * @return Heap session, or nullptr on OOM.
  */
-swsc *swsc_create_server(void);
+swsc *swsc_create_server();
 
 /**
  * @brief Parse @p src. Incomplete frames stay buffered.

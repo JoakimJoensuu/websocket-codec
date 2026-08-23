@@ -8,7 +8,7 @@
 #include <stdio.h>
 #include <string.h>
 
-int main(void) {
+int main() {
   swsc *cli = swsc_create_client(nullptr, nullptr);
   swsc *srv = swsc_create_server();
   swsc_bytes frame;

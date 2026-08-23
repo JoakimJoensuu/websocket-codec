@@ -394,10 +394,9 @@ static int on_control(swsc *ws) {
   ws->close_recv = true;
   if (ws->ctrl_len == 0) {
     ws->close_code = SWSC_CLOSE_NO_STATUS;
-    if (!ws->close_sent) {
-      if (reply_frame(ws, true, SWSC_OP_CLOSE, nullptr, 0) != SWSC_OK) {
-        return fail(ws, SWSC_ERR_NOMEM, SWSC_CLOSE_INTERNAL, "oom");
-      }
+    if (!ws->close_sent &&
+        reply_frame(ws, true, SWSC_OP_CLOSE, nullptr, 0) != SWSC_OK) {
+      return fail(ws, SWSC_ERR_NOMEM, SWSC_CLOSE_INTERNAL, "oom");
     }
     if (ev_push(ws, SWSC_EV_CLOSE, nullptr, 0, SWSC_CLOSE_NO_STATUS) != 0) {
       return fail(ws, SWSC_ERR_NOMEM, SWSC_CLOSE_INTERNAL, "oom");
@@ -423,11 +422,9 @@ static int on_control(swsc *ws) {
                   "bad close reason");
     }
     ws->close_code = code;
-    if (!ws->close_sent) {
-      if (reply_frame(ws, true, SWSC_OP_CLOSE, ws->ctrl, ws->ctrl_len) !=
-          SWSC_OK) {
-        return fail(ws, SWSC_ERR_NOMEM, SWSC_CLOSE_INTERNAL, "oom");
-      }
+    if (!ws->close_sent && reply_frame(ws, true, SWSC_OP_CLOSE, ws->ctrl,
+                                       ws->ctrl_len) != SWSC_OK) {
+      return fail(ws, SWSC_ERR_NOMEM, SWSC_CLOSE_INTERNAL, "oom");
     }
     if (ev_push(ws, SWSC_EV_CLOSE, reason, rlen, code) != 0) {
       return fail(ws, SWSC_ERR_NOMEM, SWSC_CLOSE_INTERNAL, "oom");
@@ -581,11 +578,10 @@ static int on_payload_bytes(swsc *ws, const uint8_t *src, size_t len) {
         return fail(ws, SWSC_ERR_NOMEM, SWSC_CLOSE_INTERNAL, "oom");
       }
       memcpy(ws->msg + ws->msg_len, tmp, chunk);
-      if (ws->msg_opcode == SWSC_OP_TEXT) {
-        if (utf8_feed(&ws->utf8, ws->msg + ws->msg_len, chunk) != 0) {
-          return fail(ws, SWSC_ERR_UTF8, SWSC_CLOSE_INVALID_DATA,
-                      "invalid utf-8");
-        }
+      if (ws->msg_opcode == SWSC_OP_TEXT &&
+          utf8_feed(&ws->utf8, ws->msg + ws->msg_len, chunk) != 0) {
+        return fail(ws, SWSC_ERR_UTF8, SWSC_CLOSE_INVALID_DATA,
+                    "invalid utf-8");
       }
       ws->msg_len += chunk;
     }
@@ -687,7 +683,7 @@ swsc *swsc_create_client(uint32_t (*rng)(void *ctx), void *rng_ctx) {
   return create(true, rng, rng_ctx);
 }
 
-swsc *swsc_create_server(void) { return create(false, nullptr, nullptr); }
+swsc *swsc_create_server() { return create(false, nullptr, nullptr); }
 
 void swsc_destroy(swsc *ws) {
   if (!ws) {
