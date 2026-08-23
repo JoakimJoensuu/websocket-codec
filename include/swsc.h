@@ -33,7 +33,7 @@ typedef enum {
   SWSC_ERR_NOMEM = -1,
   SWSC_ERR_PROTOCOL = -2,
   SWSC_ERR_UTF8 = -3,
-  SWSC_ERR_CLOSED = -4 /**< Further input after Close. */
+  SWSC_ERR_CLOSED = -4, /**< Further input after Close. */
 } swsc_err;
 
 typedef enum : unsigned {
@@ -42,7 +42,7 @@ typedef enum : unsigned {
   SWSC_OP_BIN = 0x2,
   SWSC_OP_CLOSE = 0x8,
   SWSC_OP_PING = 0x9,
-  SWSC_OP_PONG = 0xA
+  SWSC_OP_PONG = 0xA,
 } swsc_opcode;
 
 /** @brief 1005/1006/1015 are never sent on the wire. */
@@ -57,7 +57,7 @@ typedef enum {
   SWSC_CLOSE_POLICY = 1008,
   SWSC_CLOSE_TOO_BIG = 1009,
   SWSC_CLOSE_MANDATORY_EXT = 1010,
-  SWSC_CLOSE_INTERNAL = 1011
+  SWSC_CLOSE_INTERNAL = 1011,
 } swsc_close_code;
 
 typedef enum {
@@ -67,7 +67,7 @@ typedef enum {
   SWSC_EV_PING,
   SWSC_EV_PONG,
   SWSC_EV_CLOSE,
-  SWSC_EV_ERROR /**< A Close frame is usually in swsc_result.out. */
+  SWSC_EV_ERROR, /**< A Close frame is usually in swsc_result.out. */
 } swsc_event_kind;
 
 /**
