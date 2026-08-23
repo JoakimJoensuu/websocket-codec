@@ -20,7 +20,7 @@ jobs:
         id: clang
         with:
           path: ${{ runner.temp }}/clang
-          key: clang-23.1.0-${{ runner.os }}-tidy-format
+          key: clang-23.1.0-${{ runner.os }}-tidy-format-v2
       - if: steps.clang.outputs.cache-hit != 'true'
         id: install
         run: |
@@ -33,34 +33,30 @@ jobs:
           sudo apt-get install -y --no-install-recommends clang-format-23 clang-tidy-23
           dest="${{ runner.temp }}/clang"
           mkdir -p "$dest/bin" "$dest/lib"
-          cp -L "$(command -v clang-tidy-23)" "$dest/bin/clang-tidy.real"
-          cp -L "$(command -v clang-format-23)" "$dest/bin/clang-format.real"
-          ldd "$dest/bin/clang-tidy.real" "$dest/bin/clang-format.real" \
+          cp -L "$(command -v clang-tidy-23)" "$dest/bin/clang-tidy"
+          cp -L "$(command -v clang-format-23)" "$dest/bin/clang-format"
+          ldd "$dest/bin/clang-tidy" "$dest/bin/clang-format" \
             | awk '/=> \//{print $3}' | sort -u \
             | while read -r lib; do
                 cp -L "$lib" "$dest/lib/"
               done
-          for tool in clang-tidy clang-format; do
-            printf '%s\n' '#!/bin/sh' \
-              'd=$(CDPATH= cd -- "$(dirname "$0")" && pwd)' \
-              'export LD_LIBRARY_PATH="$d/../lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"' \
-              "exec \"\$d/${tool}.real\" \"\$@\"" >"$dest/bin/$tool"
-            chmod +x "$dest/bin/$tool"
-          done
       - if: steps.install.outcome == 'success'
         uses: actions/cache/save@v4
         with:
           path: ${{ runner.temp }}/clang
-          key: clang-23.1.0-${{ runner.os }}-tidy-format
+          key: clang-23.1.0-${{ runner.os }}-tidy-format-v2
       - run: cmake -B build
       - run: |
           export PATH="${{ runner.temp }}/clang/bin:$PATH"
+          export LD_LIBRARY_PATH="${{ runner.temp }}/clang/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+          clang-format --version
+          clang-tidy --version
           files=$(find include src examples -type f \( -name '*.c' -o -name '*.h' \) | sort)
           set +e
-          clang-format --dry-run --Werror $files >"$RUNNER_TEMP/format.log" 2>&1
-          fmt=$?
-          clang-tidy -p build -j"$(nproc)" $files >"$RUNNER_TEMP/tidy.log" 2>&1
-          tidy=$?
+          clang-format --dry-run --Werror $files | tee "$RUNNER_TEMP/format.log"
+          fmt=${PIPESTATUS[0]}
+          clang-tidy -p build -j"$(nproc)" $files | tee "$RUNNER_TEMP/tidy.log"
+          tidy=${PIPESTATUS[0]}
           set -e
           {
             echo '## clang-format'
