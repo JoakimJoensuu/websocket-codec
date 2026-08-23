@@ -17,18 +17,38 @@ jobs:
       pull-requests: read
     steps:
       - uses: actions/checkout@v5
-      - run: cmake -B build
+      - uses: actions/cache@v4
+        id: clang
+        with:
+          path: ${{ runner.temp }}/clang
+          key: clang-23.1.0-${{ runner.os }}-tidy-format
       - run: |
-          . /etc/os-release
-          wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key \
-            | sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/apt.llvm.org.gpg
-          echo "deb http://apt.llvm.org/${VERSION_CODENAME}/ llvm-toolchain-${VERSION_CODENAME}-23 main" \
-            | sudo tee /etc/apt/sources.list.d/llvm-23.list
-          sudo apt-get update
-          sudo apt-get install -y clang-format-23 clang-tidy-23
-          mkdir -p "${{ runner.temp }}/clang/bin"
-          ln -s "$(command -v clang-tidy-23)" "${{ runner.temp }}/clang/bin/clang-tidy"
-          ln -s "$(command -v clang-format-23)" "${{ runner.temp }}/clang/bin/clang-format"
+          if [ "${{ steps.clang.outputs.cache-hit }}" != "true" ]; then
+            . /etc/os-release
+            wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key \
+              | sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/apt.llvm.org.gpg
+            echo "deb http://apt.llvm.org/${VERSION_CODENAME}/ llvm-toolchain-${VERSION_CODENAME}-23 main" \
+              | sudo tee /etc/apt/sources.list.d/llvm-23.list
+            sudo apt-get update
+            sudo apt-get install -y --no-install-recommends clang-format-23 clang-tidy-23
+            dest="${{ runner.temp }}/clang"
+            mkdir -p "$dest/bin" "$dest/lib"
+            cp -L "$(command -v clang-tidy-23)" "$dest/bin/clang-tidy.real"
+            cp -L "$(command -v clang-format-23)" "$dest/bin/clang-format.real"
+            ldd "$dest/bin/clang-tidy.real" "$dest/bin/clang-format.real" \
+              | awk '/=> \//{print $3}' | sort -u \
+              | while read -r lib; do
+                  cp -L "$lib" "$dest/lib/"
+                done
+            for tool in clang-tidy clang-format; do
+              printf '%s\n' '#!/bin/sh' \
+                'd=$(CDPATH= cd -- "$(dirname "$0")" && pwd)' \
+                'export LD_LIBRARY_PATH="$d/../lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"' \
+                "exec \"\$d/${tool}.real\" \"\$@\"" >"$dest/bin/$tool"
+              chmod +x "$dest/bin/$tool"
+            done
+          fi
+          cmake -B build
       - uses: cpp-linter/cpp-linter-action@v2
         id: linter
         env:
