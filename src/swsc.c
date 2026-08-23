@@ -182,6 +182,7 @@ static void clear_events(swsc *ws) {
   for (size_t i = 0; i < ws->ev_n; i++) {
     free((void *)ws->evs[i].data);
     ws->evs[i].data = nullptr;
+    ,
   }
   ws->ev_n = 0;
 }
@@ -368,17 +369,21 @@ static int finish_message(swsc *ws) {
   swsc_event_kind kind = SWSC_EV_NONE;
   if (ws->msg_opcode == SWSC_OP_TEXT) {
     if (utf8_finish(&ws->utf8) != 0) {
-      return fail(ws, (struct fail){.err = SWSC_ERR_UTF8,
-                                    .code = SWSC_CLOSE_INVALID_DATA,
-                                    .reason = "invalid utf-8"});
+      return fail(ws, (struct fail){
+                          .err = SWSC_ERR_UTF8,
+                          .code = SWSC_CLOSE_INVALID_DATA,
+                          .reason = "invalid utf-8",
+                      });
     }
     kind = SWSC_EV_TEXT;
   } else {
     kind = SWSC_EV_BIN;
   }
-  if (ev_push(ws, (swsc_event){.kind = kind,
-                               .data = ws->msg.p,
-                               .len = ws->msg.n}) != 0) {
+  if (ev_push(ws, (swsc_event){
+                      .kind = kind,
+                      .data = ws->msg.p,
+                      .len = ws->msg.n,
+                  }) != 0) {
     return fail(ws, oom);
   }
   ws->msg.n = 0;
@@ -391,17 +396,21 @@ static int on_control(swsc *ws) {
         SWSC_OK) {
       return fail(ws, oom);
     }
-    if (ev_push(ws, (swsc_event){.kind = SWSC_EV_PING,
-                                 .data = ws->ctrl,
-                                 .len = ws->ctrl_len}) != 0) {
+    if (ev_push(ws, (swsc_event){
+                        .kind = SWSC_EV_PING,
+                        .data = ws->ctrl,
+                        .len = ws->ctrl_len,
+                    }) != 0) {
       return fail(ws, oom);
     }
     return SWSC_OK;
   }
   if (ws->opcode == SWSC_OP_PONG) {
-    if (ev_push(ws, (swsc_event){.kind = SWSC_EV_PONG,
-                                 .data = ws->ctrl,
-                                 .len = ws->ctrl_len}) != 0) {
+    if (ev_push(ws, (swsc_event){
+                        .kind = SWSC_EV_PONG,
+                        .data = ws->ctrl,
+                        .len = ws->ctrl_len,
+                    }) != 0) {
       return fail(ws, oom);
     }
     return SWSC_OK;
@@ -414,17 +423,21 @@ static int on_control(swsc *ws) {
         reply_frame(ws, true, SWSC_OP_CLOSE, nullptr, 0) != SWSC_OK) {
       return fail(ws, oom);
     }
-    if (ev_push(ws, (swsc_event){.kind = SWSC_EV_CLOSE,
-                                 .close_code = SWSC_CLOSE_NO_STATUS}) != 0) {
+    if (ev_push(ws, (swsc_event){
+                        .kind = SWSC_EV_CLOSE,
+                        .close_code = SWSC_CLOSE_NO_STATUS,
+                    }) != 0) {
       return fail(ws, oom);
     }
     ws->st = ST_DEAD;
     return SWSC_OK;
   }
   if (ws->ctrl_len < SWSC_CLOSE_CODE_LEN) {
-    return fail(ws, (struct fail){.err = SWSC_ERR_PROTOCOL,
-                                  .code = SWSC_CLOSE_PROTOCOL,
-                                  .reason = "bad close payload"});
+    return fail(ws, (struct fail){
+                        .err = SWSC_ERR_PROTOCOL,
+                        .code = SWSC_CLOSE_PROTOCOL,
+                        .reason = "bad close payload",
+                    });
   }
   {
     uint16_t code = rd16(ws->ctrl);
@@ -432,25 +445,31 @@ static int on_control(swsc *ws) {
     size_t rlen = ws->ctrl_len - SWSC_CLOSE_CODE_LEN;
     utf8 state;
     if (!swsc_close_code_valid(code)) {
-      return fail(ws, (struct fail){.err = SWSC_ERR_PROTOCOL,
-                                    .code = SWSC_CLOSE_PROTOCOL,
-                                    .reason = "bad close code"});
+      return fail(ws, (struct fail){
+                          .err = SWSC_ERR_PROTOCOL,
+                          .code = SWSC_CLOSE_PROTOCOL,
+                          .reason = "bad close code",
+                      });
     }
     utf8_init(&state);
     if (utf8_feed(&state, reason, rlen) != 0 || utf8_finish(&state) != 0) {
-      return fail(ws, (struct fail){.err = SWSC_ERR_UTF8,
-                                    .code = SWSC_CLOSE_INVALID_DATA,
-                                    .reason = "bad close reason"});
+      return fail(ws, (struct fail){
+                          .err = SWSC_ERR_UTF8,
+                          .code = SWSC_CLOSE_INVALID_DATA,
+                          .reason = "bad close reason",
+                      });
     }
     ws->close_code = code;
     if (!ws->close_sent && reply_frame(ws, true, SWSC_OP_CLOSE, ws->ctrl,
                                        ws->ctrl_len) != SWSC_OK) {
       return fail(ws, oom);
     }
-    if (ev_push(ws, (swsc_event){.kind = SWSC_EV_CLOSE,
-                                 .data = reason,
-                                 .len = rlen,
-                                 .close_code = code}) != 0) {
+    if (ev_push(ws, (swsc_event){
+                        .kind = SWSC_EV_CLOSE,
+                        .data = reason,
+                        .len = rlen,
+                        .close_code = code,
+                    }) != 0) {
       return fail(ws, oom);
     }
     ws->st = ST_DEAD;
@@ -488,47 +507,61 @@ static int on_frame_header(swsc *ws) {
   ws->masked = (byte1 & MASK_BIT) != 0;
 
   if ((byte0 & RSV_MASK) != 0) {
-    return fail(ws, (struct fail){.err = SWSC_ERR_PROTOCOL,
-                                  .code = SWSC_CLOSE_PROTOCOL,
-                                  .reason = "rsv nonzero"});
+    return fail(ws, (struct fail){
+                        .err = SWSC_ERR_PROTOCOL,
+                        .code = SWSC_CLOSE_PROTOCOL,
+                        .reason = "rsv nonzero",
+                    });
   }
   if (!is_known_opcode(ws->opcode)) {
-    return fail(ws, (struct fail){.err = SWSC_ERR_PROTOCOL,
-                                  .code = SWSC_CLOSE_PROTOCOL,
-                                  .reason = "bad opcode"});
+    return fail(ws, (struct fail){
+                        .err = SWSC_ERR_PROTOCOL,
+                        .code = SWSC_CLOSE_PROTOCOL,
+                        .reason = "bad opcode",
+                    });
   }
   if (!ws->client) {
     if (!ws->masked) {
-      return fail(ws, (struct fail){.err = SWSC_ERR_PROTOCOL,
-                                    .code = SWSC_CLOSE_PROTOCOL,
-                                    .reason = "unmasked client frame"});
+      return fail(ws, (struct fail){
+                          .err = SWSC_ERR_PROTOCOL,
+                          .code = SWSC_CLOSE_PROTOCOL,
+                          .reason = "unmasked client frame",
+                      });
     }
   } else if (ws->masked) {
-    return fail(ws, (struct fail){.err = SWSC_ERR_PROTOCOL,
-                                  .code = SWSC_CLOSE_PROTOCOL,
-                                  .reason = "masked server frame"});
+    return fail(ws, (struct fail){
+                        .err = SWSC_ERR_PROTOCOL,
+                        .code = SWSC_CLOSE_PROTOCOL,
+                        .reason = "masked server frame",
+                    });
   }
 
   if (len7 == LEN16) {
     plen = rd16(ws->hdr + HDR_BASE);
     off = HDR_BASE + LEN16_EXT;
     if (plen <= SWSC_CTRL_MAX) {
-      return fail(ws, (struct fail){.err = SWSC_ERR_PROTOCOL,
-                                    .code = SWSC_CLOSE_PROTOCOL,
-                                    .reason = "non-minimal length"});
+      return fail(ws, (struct fail){
+                          .err = SWSC_ERR_PROTOCOL,
+                          .code = SWSC_CLOSE_PROTOCOL,
+                          .reason = "non-minimal length",
+                      });
     }
   } else if (len7 == LEN64) {
     plen = rd64(ws->hdr + HDR_BASE);
     off = HDR_BASE + LEN64_EXT;
     if (plen & LEN64_MSB) {
-      return fail(ws, (struct fail){.err = SWSC_ERR_PROTOCOL,
-                                    .code = SWSC_CLOSE_PROTOCOL,
-                                    .reason = "length msb"});
+      return fail(ws, (struct fail){
+                          .err = SWSC_ERR_PROTOCOL,
+                          .code = SWSC_CLOSE_PROTOCOL,
+                          .reason = "length msb",
+                      });
     }
     if (plen <= UINT16_MAX) {
-      return fail(ws, (struct fail){.err = SWSC_ERR_PROTOCOL,
-                                    .code = SWSC_CLOSE_PROTOCOL,
-                                    .reason = "non-minimal length"});
+      return fail(ws, (struct fail){
+                          .err = SWSC_ERR_PROTOCOL,
+                          .code = SWSC_CLOSE_PROTOCOL,
+                          .reason = "non-minimal length",
+                      });
     }
   } else {
     plen = (uint64_t)len7;
@@ -540,27 +573,35 @@ static int on_frame_header(swsc *ws) {
 
   if (is_control(ws->opcode)) {
     if (!ws->fin) {
-      return fail(ws, (struct fail){.err = SWSC_ERR_PROTOCOL,
-                                    .code = SWSC_CLOSE_PROTOCOL,
-                                    .reason = "fragmented control"});
+      return fail(ws, (struct fail){
+                          .err = SWSC_ERR_PROTOCOL,
+                          .code = SWSC_CLOSE_PROTOCOL,
+                          .reason = "fragmented control",
+                      });
     }
     if (plen > SWSC_CTRL_MAX) {
-      return fail(ws, (struct fail){.err = SWSC_ERR_PROTOCOL,
-                                    .code = SWSC_CLOSE_PROTOCOL,
-                                    .reason = "control too long"});
+      return fail(ws, (struct fail){
+                          .err = SWSC_ERR_PROTOCOL,
+                          .code = SWSC_CLOSE_PROTOCOL,
+                          .reason = "control too long",
+                      });
     }
   } else {
     if (ws->opcode == SWSC_OP_CONT) {
       if (ws->msg_opcode == 0) {
-        return fail(ws, (struct fail){.err = SWSC_ERR_PROTOCOL,
-                                      .code = SWSC_CLOSE_PROTOCOL,
-                                      .reason = "orphan continuation"});
+        return fail(ws, (struct fail){
+                            .err = SWSC_ERR_PROTOCOL,
+                            .code = SWSC_CLOSE_PROTOCOL,
+                            .reason = "orphan continuation",
+                        });
       }
     } else {
       if (ws->msg_opcode != 0) {
-        return fail(ws, (struct fail){.err = SWSC_ERR_PROTOCOL,
-                                      .code = SWSC_CLOSE_PROTOCOL,
-                                      .reason = "new data while fragmented"});
+        return fail(ws, (struct fail){
+                            .err = SWSC_ERR_PROTOCOL,
+                            .code = SWSC_CLOSE_PROTOCOL,
+                            .reason = "new data while fragmented",
+                        });
       }
     }
     if (plen > (uint64_t)(size_t)-1 ||
@@ -618,9 +659,11 @@ static int on_payload_bytes(swsc *ws, const uint8_t *src, size_t len) {
       memcpy(ws->msg.p + ws->msg.n, tmp, chunk);
       if (ws->msg_opcode == SWSC_OP_TEXT &&
           utf8_feed(&ws->utf8, ws->msg.p + ws->msg.n, chunk) != 0) {
-        return fail(ws, (struct fail){.err = SWSC_ERR_UTF8,
-                                      .code = SWSC_CLOSE_INVALID_DATA,
-                                      .reason = "invalid utf-8"});
+        return fail(ws, (struct fail){
+                            .err = SWSC_ERR_UTF8,
+                            .code = SWSC_CLOSE_INVALID_DATA,
+                            .reason = "invalid utf-8",
+                        });
       }
       ws->msg.n += chunk;
     }
