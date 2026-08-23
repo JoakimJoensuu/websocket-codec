@@ -2,11 +2,17 @@
 #define BUG_H
 
 /**
- * Abort on a programming error.
+ * Abort unless @p ok.
  */
 
 #include <stdbool.h>
+#include <stdlib.h>
 
-void bug(bool valid);
+#define bug(ok)                                                                \
+  do {                                                                         \
+    if ((bool)(ok) == false) {                                                 \
+      abort();                                                                 \
+    }                                                                          \
+  } while (0)
 
 #endif
