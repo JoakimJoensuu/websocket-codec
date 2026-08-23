@@ -23,7 +23,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          version: "23"
+          version: "22"
           style: file
           tidy-checks: ""
           database: build
