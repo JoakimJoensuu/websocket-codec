@@ -19,9 +19,12 @@ jobs:
       - uses: actions/checkout@v5
       - run: cmake -B build
       - run: |
-          wget https://apt.llvm.org/llvm.sh -O "${{ runner.temp }}/llvm.sh"
-          chmod +x "${{ runner.temp }}/llvm.sh"
-          sudo "${{ runner.temp }}/llvm.sh" 23
+          . /etc/os-release
+          wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key \
+            | sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/apt.llvm.org.gpg
+          echo "deb http://apt.llvm.org/${VERSION_CODENAME}/ llvm-toolchain-${VERSION_CODENAME}-23 main" \
+            | sudo tee /etc/apt/sources.list.d/llvm-23.list
+          sudo apt-get update
           sudo apt-get install -y clang-format-23 clang-tidy-23
           mkdir -p "${{ runner.temp }}/clang/bin"
           ln -s "$(command -v clang-tidy-23)" "${{ runner.temp }}/clang/bin/clang-tidy"
