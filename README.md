@@ -2,7 +2,7 @@
 
 Platform-independent RFC 6455 WebSocket codec in C.
 
-Bytes ↔ one WebSocket frame (RFC 6455 §§5.2–5.3): FIN, RSV, opcode, MASK,
+Encode and decode one WebSocket frame (RFC 6455 §§5.2–5.3): FIN, RSV, opcode, MASK,
 payload length, masking key, payload. No HTTP, TCP, TLS, session, or
 message reassembly.
 

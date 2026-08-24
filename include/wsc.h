@@ -2,7 +2,7 @@
 #define WSC_H
 
 /**
- * Bytes ↔ one WebSocket frame (RFC 6455 §§5.2–5.3).
+ * Encode and decode one WebSocket frame (RFC 6455 §§5.2–5.3).
  */
 
 #include <stdbool.h>
@@ -17,7 +17,7 @@ enum : int {
 
 enum : unsigned { WSC_MASK_LEN = 4 };
 
-enum : uint8_t {
+enum wsc_opcode : uint8_t {
   WSC_OP_CONT = 0x0,
   WSC_OP_TEXT = 0x1,
   WSC_OP_BIN = 0x2,
@@ -29,7 +29,8 @@ enum : uint8_t {
 enum wsc_err {
   WSC_OK = 0,
   WSC_ERR_NOMEM = -1,
-  WSC_ERR_FRAME = -2, /**< Non-minimal length or 64-bit length MSB. */
+  WSC_ERR_NONMINIMAL = -2,
+  WSC_ERR_LEN64_MSB = -3,
 };
 
 struct wsc_frame {

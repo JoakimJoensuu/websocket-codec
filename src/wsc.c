@@ -301,16 +301,16 @@ static enum wsc_err on_header(struct wsc_dec *dec) {
     plen = rd16(dec->hdr + HDR_BASE);
     off = HDR_BASE + LEN16_EXT;
     if (plen <= LEN7_MAX) {
-      return fail(dec, WSC_ERR_FRAME);
+      return fail(dec, WSC_ERR_NONMINIMAL);
     }
   } else if (len7 == LEN64) {
     plen = rd64(dec->hdr + HDR_BASE);
     off = HDR_BASE + LEN64_EXT;
     if ((plen & LEN64_MSB) != 0) {
-      return fail(dec, WSC_ERR_FRAME);
+      return fail(dec, WSC_ERR_LEN64_MSB);
     }
     if (plen <= UINT16_MAX) {
-      return fail(dec, WSC_ERR_FRAME);
+      return fail(dec, WSC_ERR_NONMINIMAL);
     }
   } else {
     plen = (uint64_t)len7;

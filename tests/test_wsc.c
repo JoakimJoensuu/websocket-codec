@@ -350,10 +350,10 @@ static void test_non_minimal_len16() {
   struct wsc_result result;
   assert(dec != nullptr);
   result = wsc_dec_feed(dec, buf, wire_len);
-  assert(result.err == WSC_ERR_FRAME);
+  assert(result.err == WSC_ERR_NONMINIMAL);
   assert(result.frames_cnt == 0);
   result = wsc_dec_feed(dec, buf, wire_len);
-  assert(result.err == WSC_ERR_FRAME);
+  assert(result.err == WSC_ERR_NONMINIMAL);
   wsc_dec_destroy(dec);
 }
 
@@ -366,7 +366,7 @@ static void test_non_minimal_len64() {
   struct wsc_result result;
   assert(dec != nullptr);
   result = wsc_dec_feed(dec, buf, wire_len);
-  assert(result.err == WSC_ERR_FRAME);
+  assert(result.err == WSC_ERR_NONMINIMAL);
   wsc_dec_destroy(dec);
 }
 
@@ -380,7 +380,7 @@ static void test_len64_msb() {
   buf[2] = LEN64_MSB_BYTE;
   assert(dec != nullptr);
   result = wsc_dec_feed(dec, buf, sizeof buf);
-  assert(result.err == WSC_ERR_FRAME);
+  assert(result.err == WSC_ERR_LEN64_MSB);
   wsc_dec_destroy(dec);
 }
 
