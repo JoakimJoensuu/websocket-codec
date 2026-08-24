@@ -32,6 +32,5 @@ CustomChecks:
         Message: field name is too short, expected at least 3 characters
         Level: Warning
 CheckOptions:
-  readability-identifier-length.IgnoredVariableNames: '^(ws|i)$'
-  readability-identifier-length.IgnoredParameterNames: '^ws$'
+  readability-identifier-length.IgnoredVariableNames: '^i$'
   readability-implicit-bool-conversion.AllowLogicalOperatorConversion: true
