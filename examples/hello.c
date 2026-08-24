@@ -4,6 +4,7 @@
 
 #include "wsc.h"
 
+#include <stdint.h>
 #include <stdio.h>
 
 int main() {
