@@ -1,6 +1,6 @@
 # WebSocket codec
 
-Encode and decode one WebSocket frame (RFC 6455 sections 5.2-5.3). Incremental: a
+Encode and decode one WebSocket frame (RFC 6455 §§5.2–5.3). Incremental: a
 frame may split across feeds. No HTTP, TCP, TLS, session, or message
 reassembly.
 

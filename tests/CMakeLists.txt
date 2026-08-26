@@ -16,7 +16,6 @@ FetchContent_MakeAvailable(cgreen)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 add_executable(test_wsc wsc.c)
-target_link_libraries(test_wsc PRIVATE wsc cgreen_static)
-wsc_add_warnings(test_wsc)
+target_link_libraries(test_wsc PRIVATE wsc wsc_warnings cgreen_static)
 target_include_directories(test_wsc SYSTEM PRIVATE ${cgreen_SOURCE_DIR}/include)
 add_test(NAME wsc COMMAND test_wsc)
