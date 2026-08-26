@@ -27,8 +27,7 @@ Do not typedef structs or enums.
 
 Use `_cnt` for item counts and `_len` for sequence length.
 
-Prefer full words over abbreviations in public names. Match the protocol's
-names when it has them.
+Prefer full words over abbreviations. Match the protocol's names when it has them.
 
 ## Functions
 
