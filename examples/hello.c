@@ -1,8 +1,4 @@
-/**
- * Encode one frame and parse those bytes back.
- */
-
-#include "wsc.h"
+#include <wsc.h>
 
 #include <stdint.h>
 #include <stdio.h>

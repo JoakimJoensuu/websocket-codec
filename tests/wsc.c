@@ -1,30 +1,35 @@
-#include "wsc.h"
+#include <wsc.h>
 
-#include <assert.h>
+#include <cgreen/assertions.h>
+#include <cgreen/constraint_syntax_helpers.h>
+#include <cgreen/runner.h>
+#include <cgreen/suite.h>
+#include <cgreen/text_reporter.h>
+#include <cgreen/unit.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 
 enum : unsigned {
-  HDR_BASE = 2,
+  HDR_BASE  = 2,
   LEN16_EXT = 2,
   LEN64_EXT = 8,
-  LEN7_MAX = 125,
-  LEN16 = 126,
-  LEN64 = 127,
+  LEN7_MAX  = 125,
+  LEN16     = 126,
+  LEN64     = 127,
 };
 
 enum : uint8_t {
-  FIN_BIT = 0x80,
-  RSV1_BIT = 0x40,
-  RSV2_BIT = 0x20,
-  RSV3_BIT = 0x10,
-  RSV_MASK = 0x70,
-  OPCODE_MASK = 0x0F,
-  MASK_BIT = 0x80,
-  LEN7_MASK = 0x7F,
-  FILL_MID = 0xab,
-  FILL_WIDE = 0xcd,
+  FIN_BIT        = 0x80,
+  RSV1_BIT       = 0x40,
+  RSV2_BIT       = 0x20,
+  RSV3_BIT       = 0x10,
+  RSV_MASK       = 0x70,
+  OPCODE_MASK    = 0x0F,
+  MASK_BIT       = 0x80,
+  LEN7_MASK      = 0x7F,
+  FILL_MID       = 0xab,
+  FILL_WIDE      = 0xcd,
   LEN64_MSB_BYTE = 0x80,
 };
 
@@ -63,7 +68,7 @@ static size_t craft(uint8_t *dst, size_t dst_cap, bool fin, unsigned rsv, uint8_
     hlen += WSC_MASK_LEN;
   }
   total = hlen + payload_len;
-  assert(total <= dst_cap);
+  assert_that(total <= dst_cap, is_true);
 
   dst[0] = (uint8_t)((fin ? (unsigned)FIN_BIT : 0U) | ((rsv << 4U) & RSV_MASK) |
                      ((unsigned)opcode & (unsigned)OPCODE_MASK));
@@ -89,21 +94,21 @@ static size_t craft(uint8_t *dst, size_t dst_cap, bool fin, unsigned rsv, uint8_
 }
 
 static void assert_frame(const struct wsc_frame *got, const struct wsc_frame *want) {
-  assert(got->fin == want->fin);
-  assert(got->rsv1 == want->rsv1);
-  assert(got->rsv2 == want->rsv2);
-  assert(got->rsv3 == want->rsv3);
-  assert(got->opcode == want->opcode);
-  assert(got->masked == want->masked);
-  assert(got->payload_len == want->payload_len);
+  assert_that(got->fin, is_equal_to(want->fin));
+  assert_that(got->rsv1, is_equal_to(want->rsv1));
+  assert_that(got->rsv2, is_equal_to(want->rsv2));
+  assert_that(got->rsv3, is_equal_to(want->rsv3));
+  assert_that(got->opcode, is_equal_to(want->opcode));
+  assert_that(got->masked, is_equal_to(want->masked));
+  assert_that(got->payload_len, is_equal_to(want->payload_len));
   if (want->payload_len > 0) {
-    assert(got->payload != nullptr);
-    assert(memcmp(got->payload, want->payload, want->payload_len) == 0);
+    assert_that(got->payload, is_non_null);
+    assert_that(memcmp(got->payload, want->payload, want->payload_len), is_equal_to(0));
   } else {
-    assert(got->payload == nullptr);
+    assert_that(got->payload, is_null);
   }
   if (want->masked) {
-    assert(memcmp(got->mask_key, want->mask_key, WSC_MASK_LEN) == 0);
+    assert_that(memcmp(got->mask_key, want->mask_key, WSC_MASK_LEN), is_equal_to(0));
   }
 }
 
@@ -125,9 +130,9 @@ static struct wsc_frame make_frame(bool fin, uint8_t opcode, const uint8_t *payl
 static uint8_t *encode_buf(const struct wsc_frame *frame, size_t *wire_len) {
   size_t need = wsc_encoded_len(frame);
   uint8_t *buf = (uint8_t *)malloc(need);
-  assert(buf != nullptr);
+  assert_that(buf, is_non_null);
   *wire_len = wsc_encode(buf, need, frame);
-  assert(*wire_len == need);
+  assert_that(*wire_len, is_equal_to(need));
   return buf;
 }
 
@@ -136,10 +141,10 @@ static void roundtrip(const struct wsc_frame *want) {
   uint8_t *buf = encode_buf(want, &wire_len);
   struct wsc_dec *dec = wsc_dec_create();
   struct wsc_result result;
-  assert(dec != nullptr);
+  assert_that(dec, is_non_null);
   result = wsc_dec_feed(dec, buf, wire_len);
-  assert(result.err == WSC_OK);
-  assert(result.frames_cnt == 1);
+  assert_that(result.err, is_equal_to(WSC_OK));
+  assert_that(result.frames_cnt, is_equal_to(1));
   assert_frame(&result.frames[0], want);
   wsc_dec_destroy(dec);
   free(buf);
@@ -150,49 +155,49 @@ static void roundtrip_split(const struct wsc_frame *want, size_t first) {
   uint8_t *buf = encode_buf(want, &wire_len);
   struct wsc_dec *dec = wsc_dec_create();
   struct wsc_result result;
-  assert(dec != nullptr);
-  assert(first < wire_len);
+  assert_that(dec, is_non_null);
+  assert_that(first < wire_len, is_true);
   result = wsc_dec_feed(dec, buf, first);
-  assert(result.err == WSC_OK);
-  assert(result.frames_cnt == 0);
+  assert_that(result.err, is_equal_to(WSC_OK));
+  assert_that(result.frames_cnt, is_equal_to(0));
   result = wsc_dec_feed(dec, buf + first, wire_len - first);
-  assert(result.err == WSC_OK);
-  assert(result.frames_cnt == 1);
+  assert_that(result.err, is_equal_to(WSC_OK));
+  assert_that(result.frames_cnt, is_equal_to(1));
   assert_frame(&result.frames[0], want);
   wsc_dec_destroy(dec);
   free(buf);
 }
 
-static void test_rfc_unmasked_hello() {
+Ensure(rfc_unmasked_hello) {
   const uint8_t wire[] = {0x81, 0x05, 0x48, 0x65, 0x6c, 0x6c, 0x6f};
   const uint8_t hello[] = {'H', 'e', 'l', 'l', 'o'};
   struct wsc_frame want = make_frame(true, WSC_OP_TEXT, hello, sizeof hello, nullptr);
   struct wsc_dec *dec = wsc_dec_create();
   struct wsc_result result;
-  assert(dec != nullptr);
+  assert_that(dec, is_non_null);
   result = wsc_dec_feed(dec, wire, sizeof wire);
-  assert(result.err == WSC_OK);
-  assert(result.frames_cnt == 1);
+  assert_that(result.err, is_equal_to(WSC_OK));
+  assert_that(result.frames_cnt, is_equal_to(1));
   assert_frame(&result.frames[0], &want);
   wsc_dec_destroy(dec);
 }
 
-static void test_rfc_masked_hello() {
+Ensure(rfc_masked_hello) {
   const uint8_t wire[] = {0x81, 0x85, 0x37, 0xfa, 0x21, 0x3d, 0x7f, 0x9f, 0x4d, 0x51, 0x58};
   const uint8_t hello[] = {'H', 'e', 'l', 'l', 'o'};
   const uint8_t key[] = {0x37, 0xfa, 0x21, 0x3d};
   struct wsc_frame want = make_frame(true, WSC_OP_TEXT, hello, sizeof hello, key);
   struct wsc_dec *dec = wsc_dec_create();
   struct wsc_result result;
-  assert(dec != nullptr);
+  assert_that(dec, is_non_null);
   result = wsc_dec_feed(dec, wire, sizeof wire);
-  assert(result.err == WSC_OK);
-  assert(result.frames_cnt == 1);
+  assert_that(result.err, is_equal_to(WSC_OK));
+  assert_that(result.frames_cnt, is_equal_to(1));
   assert_frame(&result.frames[0], &want);
   wsc_dec_destroy(dec);
 }
 
-static void test_roundtrip_sizes() {
+Ensure(roundtrip_sizes) {
   const size_t sizes[] = {0, 1, LEN7_MAX, LEN7_MAX + 1, UINT16_MAX, (size_t)UINT16_MAX + 1};
   const uint8_t key[] = {1, 2, 3, 4};
   for (size_t idx = 0; idx < sizeof sizes / sizeof sizes[0]; idx++) {
@@ -201,7 +206,7 @@ static void test_roundtrip_sizes() {
     struct wsc_frame frame;
     if (length > 0) {
       payload = (uint8_t *)malloc(length);
-      assert(payload != nullptr);
+      assert_that(payload, is_non_null);
       for (size_t i = 0; i < length; i++) {
         payload[i] = (uint8_t)(i * 3U);
       }
@@ -214,7 +219,7 @@ static void test_roundtrip_sizes() {
   }
 }
 
-static void test_header_length_bytes() {
+Ensure(header_length_bytes) {
   uint8_t one = 1;
   uint8_t mid[LEN7_MAX + 1];
   uint8_t *wide = nullptr;
@@ -225,29 +230,29 @@ static void test_header_length_bytes() {
   memset(mid, FILL_MID, sizeof mid);
   frame = make_frame(true, WSC_OP_BIN, &one, 1, nullptr);
   buf = encode_buf(&frame, &wire_len);
-  assert(wire_len == HDR_BASE + 1);
-  assert((buf[1] & MASK_BIT) == 0);
-  assert((buf[1] & LEN7_MASK) == 1);
+  assert_that(wire_len, is_equal_to(HDR_BASE + 1));
+  assert_that((buf[1] & MASK_BIT), is_equal_to(0));
+  assert_that((buf[1] & LEN7_MASK), is_equal_to(1));
   free(buf);
 
   frame = make_frame(true, WSC_OP_BIN, mid, sizeof mid, nullptr);
   buf = encode_buf(&frame, &wire_len);
-  assert(wire_len == HDR_BASE + LEN16_EXT + sizeof mid);
-  assert(buf[1] == LEN16);
+  assert_that(wire_len, is_equal_to(HDR_BASE + LEN16_EXT + sizeof mid));
+  assert_that(buf[1], is_equal_to(LEN16));
   free(buf);
 
   wide = (uint8_t *)malloc((size_t)UINT16_MAX + 1);
-  assert(wide != nullptr);
+  assert_that(wide, is_non_null);
   memset(wide, FILL_WIDE, (size_t)UINT16_MAX + 1);
   frame = make_frame(true, WSC_OP_BIN, wide, (size_t)UINT16_MAX + 1, nullptr);
   buf = encode_buf(&frame, &wire_len);
-  assert(wire_len == HDR_BASE + LEN64_EXT + (size_t)UINT16_MAX + 1);
-  assert(buf[1] == LEN64);
+  assert_that(wire_len, is_equal_to(HDR_BASE + LEN64_EXT + (size_t)UINT16_MAX + 1));
+  assert_that(buf[1], is_equal_to(LEN64));
   free(buf);
   free(wide);
 }
 
-static void test_split_and_empty_feed() {
+Ensure(split_and_empty_feed) {
   const uint8_t hello[] = {'h', 'i'};
   const uint8_t key[] = {9, 8, 7, 6};
   struct wsc_frame want = make_frame(true, WSC_OP_TEXT, hello, sizeof hello, key);
@@ -255,20 +260,20 @@ static void test_split_and_empty_feed() {
   uint8_t *buf = encode_buf(&want, &wire_len);
   struct wsc_dec *dec = wsc_dec_create();
   struct wsc_result result;
-  assert(dec != nullptr);
+  assert_that(dec, is_non_null);
 
   result = wsc_dec_feed(dec, buf, 1);
-  assert(result.err == WSC_OK);
-  assert(result.frames_cnt == 0);
+  assert_that(result.err, is_equal_to(WSC_OK));
+  assert_that(result.frames_cnt, is_equal_to(0));
   result = wsc_dec_feed(dec, nullptr, 0);
-  assert(result.err == WSC_OK);
-  assert(result.frames_cnt == 0);
+  assert_that(result.err, is_equal_to(WSC_OK));
+  assert_that(result.frames_cnt, is_equal_to(0));
   result = wsc_dec_feed(dec, buf + 1, 1);
-  assert(result.err == WSC_OK);
-  assert(result.frames_cnt == 0);
+  assert_that(result.err, is_equal_to(WSC_OK));
+  assert_that(result.frames_cnt, is_equal_to(0));
   result = wsc_dec_feed(dec, buf + 2, wire_len - 2);
-  assert(result.err == WSC_OK);
-  assert(result.frames_cnt == 1);
+  assert_that(result.err, is_equal_to(WSC_OK));
+  assert_that(result.frames_cnt, is_equal_to(1));
   assert_frame(&result.frames[0], &want);
 
   wsc_dec_destroy(dec);
@@ -277,7 +282,7 @@ static void test_split_and_empty_feed() {
   roundtrip_split(&want, 3);
 }
 
-static void test_byte_at_a_time() {
+Ensure(byte_at_a_time) {
   const uint8_t hello[] = {'h', 'i', '!'};
   const uint8_t key[] = {0x11, 0x22, 0x33, 0x44};
   struct wsc_frame want = make_frame(true, WSC_OP_TEXT, hello, sizeof hello, key);
@@ -285,14 +290,14 @@ static void test_byte_at_a_time() {
   uint8_t *buf = encode_buf(&want, &wire_len);
   struct wsc_dec *dec = wsc_dec_create();
   struct wsc_result result;
-  assert(dec != nullptr);
+  assert_that(dec, is_non_null);
   for (size_t i = 0; i < wire_len; i++) {
     result = wsc_dec_feed(dec, buf + i, 1);
-    assert(result.err == WSC_OK);
+    assert_that(result.err, is_equal_to(WSC_OK));
     if (i + 1 < wire_len) {
-      assert(result.frames_cnt == 0);
+      assert_that(result.frames_cnt, is_equal_to(0));
     } else {
-      assert(result.frames_cnt == 1);
+      assert_that(result.frames_cnt, is_equal_to(1));
       assert_frame(&result.frames[0], &want);
     }
   }
@@ -300,7 +305,7 @@ static void test_byte_at_a_time() {
   free(buf);
 }
 
-static void test_rsv_opcode_fin() {
+Ensure(rsv_opcode_fin) {
   const uint8_t payload[] = {0xff, 0x00};
   struct wsc_frame frame = make_frame(false, 0x3, payload, sizeof payload, nullptr);
   frame.rsv1 = true;
@@ -312,7 +317,7 @@ static void test_rsv_opcode_fin() {
   roundtrip(&frame);
 }
 
-static void test_two_frames_one_feed() {
+Ensure(two_frames_one_feed) {
   const uint8_t first_payload[] = {'a'};
   const uint8_t second_payload[] = {'b', 'b'};
   struct wsc_frame first =
@@ -326,13 +331,13 @@ static void test_two_frames_one_feed() {
   uint8_t *both = (uint8_t *)malloc(first_len + second_len);
   struct wsc_dec *dec = wsc_dec_create();
   struct wsc_result result;
-  assert(both != nullptr);
-  assert(dec != nullptr);
+  assert_that(both, is_non_null);
+  assert_that(dec, is_non_null);
   memcpy(both, first_buf, first_len);
   memcpy(both + first_len, second_buf, second_len);
   result = wsc_dec_feed(dec, both, first_len + second_len);
-  assert(result.err == WSC_OK);
-  assert(result.frames_cnt == 2);
+  assert_that(result.err, is_equal_to(WSC_OK));
+  assert_that(result.frames_cnt, is_equal_to(2));
   assert_frame(&result.frames[0], &first);
   assert_frame(&result.frames[1], &second);
   wsc_dec_destroy(dec);
@@ -341,36 +346,36 @@ static void test_two_frames_one_feed() {
   free(second_buf);
 }
 
-static void test_non_minimal_len16() {
+Ensure(non_minimal_len16) {
   uint8_t buf[HDR_BASE + LEN16_EXT + 1];
   const uint8_t payload[] = {0x01};
   size_t wire_len =
       craft(buf, sizeof buf, true, 0, WSC_OP_BIN, nullptr, LEN16, payload, sizeof payload);
   struct wsc_dec *dec = wsc_dec_create();
   struct wsc_result result;
-  assert(dec != nullptr);
+  assert_that(dec, is_non_null);
   result = wsc_dec_feed(dec, buf, wire_len);
-  assert(result.err == WSC_ERR_NONMINIMAL);
-  assert(result.frames_cnt == 0);
+  assert_that(result.err, is_equal_to(WSC_ERR_NONMINIMAL));
+  assert_that(result.frames_cnt, is_equal_to(0));
   result = wsc_dec_feed(dec, buf, wire_len);
-  assert(result.err == WSC_ERR_NONMINIMAL);
+  assert_that(result.err, is_equal_to(WSC_ERR_NONMINIMAL));
   wsc_dec_destroy(dec);
 }
 
-static void test_non_minimal_len64() {
+Ensure(non_minimal_len64) {
   uint8_t buf[HDR_BASE + LEN64_EXT + 1];
   const uint8_t payload[] = {0x11};
   size_t wire_len =
       craft(buf, sizeof buf, true, 0, WSC_OP_BIN, nullptr, LEN64, payload, sizeof payload);
   struct wsc_dec *dec = wsc_dec_create();
   struct wsc_result result;
-  assert(dec != nullptr);
+  assert_that(dec, is_non_null);
   result = wsc_dec_feed(dec, buf, wire_len);
-  assert(result.err == WSC_ERR_NONMINIMAL);
+  assert_that(result.err, is_equal_to(WSC_ERR_NONMINIMAL));
   wsc_dec_destroy(dec);
 }
 
-static void test_len64_msb() {
+Ensure(len64_msb) {
   uint8_t buf[HDR_BASE + LEN64_EXT];
   struct wsc_dec *dec = wsc_dec_create();
   struct wsc_result result;
@@ -378,13 +383,13 @@ static void test_len64_msb() {
   buf[0] = (uint8_t)(FIN_BIT | WSC_OP_BIN);
   buf[1] = LEN64;
   buf[2] = LEN64_MSB_BYTE;
-  assert(dec != nullptr);
+  assert_that(dec, is_non_null);
   result = wsc_dec_feed(dec, buf, sizeof buf);
-  assert(result.err == WSC_ERR_LEN64_MSB);
+  assert_that(result.err, is_equal_to(WSC_ERR_LEN64_MSB));
   wsc_dec_destroy(dec);
 }
 
-static void test_masked_raw_header() {
+Ensure(masked_raw_header) {
   const uint8_t key[] = {0x01, 0x02, 0x03, 0x04};
   const uint8_t payload[] = {0x10, 0x20, 0x30, 0x40, 0x50};
   uint8_t buf[HDR_BASE + WSC_MASK_LEN + sizeof payload];
@@ -393,26 +398,27 @@ static void test_masked_raw_header() {
   struct wsc_frame want = make_frame(true, WSC_OP_BIN, payload, sizeof payload, key);
   struct wsc_dec *dec = wsc_dec_create();
   struct wsc_result result;
-  assert(dec != nullptr);
+  assert_that(dec, is_non_null);
   result = wsc_dec_feed(dec, buf, wire_len);
-  assert(result.err == WSC_OK);
-  assert(result.frames_cnt == 1);
+  assert_that(result.err, is_equal_to(WSC_OK));
+  assert_that(result.frames_cnt, is_equal_to(1));
   assert_frame(&result.frames[0], &want);
   wsc_dec_destroy(dec);
 }
 
 int main() {
-  test_rfc_unmasked_hello();
-  test_rfc_masked_hello();
-  test_roundtrip_sizes();
-  test_header_length_bytes();
-  test_split_and_empty_feed();
-  test_byte_at_a_time();
-  test_rsv_opcode_fin();
-  test_two_frames_one_feed();
-  test_non_minimal_len16();
-  test_non_minimal_len64();
-  test_len64_msb();
-  test_masked_raw_header();
-  return 0;
+  auto suite = create_test_suite();
+  add_test(suite, rfc_unmasked_hello);
+  add_test(suite, rfc_masked_hello);
+  add_test(suite, roundtrip_sizes);
+  add_test(suite, header_length_bytes);
+  add_test(suite, split_and_empty_feed);
+  add_test(suite, byte_at_a_time);
+  add_test(suite, rsv_opcode_fin);
+  add_test(suite, two_frames_one_feed);
+  add_test(suite, non_minimal_len16);
+  add_test(suite, non_minimal_len64);
+  add_test(suite, len64_msb);
+  add_test(suite, masked_raw_header);
+  return run_test_suite(suite, create_text_reporter());
 }

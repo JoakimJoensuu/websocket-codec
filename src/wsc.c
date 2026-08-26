@@ -6,32 +6,32 @@
 #include <string.h>
 
 enum : unsigned {
-  HDR_BASE = 2,
+  HDR_BASE  = 2,
   LEN16_EXT = 2,
   LEN64_EXT = 8,
-  HDR_MAX = HDR_BASE + LEN64_EXT + WSC_MASK_LEN,
+  HDR_MAX   = HDR_BASE + LEN64_EXT + WSC_MASK_LEN,
 };
 
 enum : unsigned {
   LEN7_MAX = 125,
-  LEN16 = 126,
-  LEN64 = 127,
+  LEN16    = 126,
+  LEN64    = 127,
 };
 
 enum : uint8_t {
-  FIN_BIT = 0x80,
-  RSV1_BIT = 0x40,
-  RSV2_BIT = 0x20,
-  RSV3_BIT = 0x10,
+  FIN_BIT     = 0x80,
+  RSV1_BIT    = 0x40,
+  RSV2_BIT    = 0x20,
+  RSV3_BIT    = 0x10,
   OPCODE_MASK = 0x0F,
-  MASK_BIT = 0x80,
-  LEN7_MASK = 0x7F,
+  MASK_BIT    = 0x80,
+  LEN7_MASK   = 0x7F,
 };
 
 enum : uint64_t { LEN64_MSB = 0x8000000000000000 };
 
 enum : unsigned {
-  BUF_INIT = 256,
+  BUF_INIT    = 256,
   FRAMES_INIT = 8,
 };
 

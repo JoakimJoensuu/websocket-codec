@@ -52,7 +52,7 @@ jobs:
           export LD_LIBRARY_PATH="${{ runner.temp }}/clang/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
           clang-format --version
           clang-tidy --version
-          sources=$(find include src examples tests -type f \( -name '*.c' -o -name '*.h' \) | sort)
+          sources=$(find include src examples tests -type f -name '*.[ch]' | sort)
           units=$(jq -r '.[].file' compile_commands.json)
           set +e
           clang-format --dry-run --Werror $sources | tee "$RUNNER_TEMP/format.log"
