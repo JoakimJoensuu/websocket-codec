@@ -23,8 +23,8 @@ Every change to these documents needs approval first: a new convention, a
 replacement, a document added to the list, a link that no longer points
 anywhere. Do not wait for an answer. Finish the task, then put the
 proposal last in your reply under the heading "Proposed", so it is easy
-to find and quote. Do not edit until it is accepted; a direct request
-already counts.
+to find and quote. Name the file and quote the wording. Do not edit until
+it is accepted; a direct request already counts.
 
 An agent-suggested change that is not the current task goes on a
 new branch.
@@ -38,3 +38,6 @@ above. If files contradict themselves or each other, flag that too.
 ## Commits and pull requests
 
 Do not attribute a commit or pull request to a tool or agent.
+
+If a review comment questions a common idiom or convention, say that and
+keep it. Change it only when the comment asks to change it.
