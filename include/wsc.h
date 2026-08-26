@@ -18,19 +18,19 @@ enum : int {
 enum : unsigned { WSC_MASK_LEN = 4 };
 
 enum wsc_opcode : uint8_t {
-  WSC_OP_CONT = 0x0,
-  WSC_OP_TEXT = 0x1,
-  WSC_OP_BIN = 0x2,
+  WSC_OP_CONT  = 0x0,
+  WSC_OP_TEXT  = 0x1,
+  WSC_OP_BIN   = 0x2,
   WSC_OP_CLOSE = 0x8,
-  WSC_OP_PING = 0x9,
-  WSC_OP_PONG = 0xA,
+  WSC_OP_PING  = 0x9,
+  WSC_OP_PONG  = 0xA,
 };
 
 enum wsc_err {
-  WSC_OK = 0,
-  WSC_ERR_NOMEM = -1,
+  WSC_OK             = 0,
+  WSC_ERR_NOMEM      = -1,
   WSC_ERR_NONMINIMAL = -2,
-  WSC_ERR_LEN64_MSB = -3,
+  WSC_ERR_LEN64_MSB  = -3,
 };
 
 struct wsc_frame {

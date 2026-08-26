@@ -6,25 +6,25 @@
 #include <string.h>
 
 enum : unsigned {
-  HDR_BASE = 2,
+  HDR_BASE  = 2,
   LEN16_EXT = 2,
   LEN64_EXT = 8,
-  LEN7_MAX = 125,
-  LEN16 = 126,
-  LEN64 = 127,
+  LEN7_MAX  = 125,
+  LEN16     = 126,
+  LEN64     = 127,
 };
 
 enum : uint8_t {
-  FIN_BIT = 0x80,
-  RSV1_BIT = 0x40,
-  RSV2_BIT = 0x20,
-  RSV3_BIT = 0x10,
-  RSV_MASK = 0x70,
-  OPCODE_MASK = 0x0F,
-  MASK_BIT = 0x80,
-  LEN7_MASK = 0x7F,
-  FILL_MID = 0xab,
-  FILL_WIDE = 0xcd,
+  FIN_BIT        = 0x80,
+  RSV1_BIT       = 0x40,
+  RSV2_BIT       = 0x20,
+  RSV3_BIT       = 0x10,
+  RSV_MASK       = 0x70,
+  OPCODE_MASK    = 0x0F,
+  MASK_BIT       = 0x80,
+  LEN7_MASK      = 0x7F,
+  FILL_MID       = 0xab,
+  FILL_WIDE      = 0xcd,
   LEN64_MSB_BYTE = 0x80,
 };
 

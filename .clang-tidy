@@ -6,6 +6,7 @@ Checks: >
   -llvm-header-guard,
   -*-braces-around-statements
 WarningsAsErrors: '*'
+HeaderFilterRegex: '.*'
 FormatStyle: file
 CustomChecks:
   - Name: implicit-pointer-to-bool-conversion
