@@ -9,10 +9,10 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 file(CREATE_LINK "${CMAKE_BINARY_DIR}/compile_commands.json"
      "${CMAKE_SOURCE_DIR}/compile_commands.json" SYMBOLIC COPY_ON_ERROR)
 
-add_library(wsc_warnings INTERFACE)
-target_compile_options(
-  wsc_warnings
-  INTERFACE -Wall
+function(wsc_add_warnings target)
+  target_compile_options(
+    ${target}
+    PRIVATE -Wall
             -Wextra
             -Wpedantic
             -Werror
@@ -21,10 +21,11 @@ target_compile_options(
             -Wmissing-prototypes
             -Wshadow
             -Wstrict-prototypes)
+endfunction()
 
 add_library(wsc src/wsc.c)
 target_include_directories(wsc PUBLIC include)
-target_link_libraries(wsc PRIVATE wsc_warnings)
+wsc_add_warnings(wsc)
 
 option(WSC_EXAMPLES "Build examples" ${PROJECT_IS_TOP_LEVEL})
 option(WSC_TESTS "Build tests" ${PROJECT_IS_TOP_LEVEL})
