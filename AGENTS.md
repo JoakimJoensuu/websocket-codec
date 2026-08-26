@@ -12,6 +12,9 @@ They apply to the files and commits you write, and to how you work in this
 codebase. If a change goes against what they say, say so; if it is meant to
 stand, propose the replacement.
 
+If the user questions a common idiom or convention, say that and keep it.
+Change it only when they ask to change it.
+
 When the user's input states or implies a standing practice, propose how
 we write it, in wording another repository could reuse. A correction counts
 when it is how that kind of thing should always be done. One instance
@@ -38,6 +41,3 @@ above. If files contradict themselves or each other, flag that too.
 ## Commits and pull requests
 
 Do not attribute a commit or pull request to a tool or agent.
-
-If a review comment questions a common idiom or convention, say that and
-keep it. Change it only when the comment asks to change it.
