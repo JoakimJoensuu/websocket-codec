@@ -12,8 +12,9 @@ They apply to the files and commits you write, and to how you work in this
 codebase. If a change goes against what they say, say so; if it is meant to
 stand, propose the replacement.
 
-If the user questions a common idiom or convention, say that and keep it.
-Change it only when they ask to change it.
+If a request or suggestion goes against a common idiom or convention, say
+so and keep the idiom. Do that even when they ask directly. Change it only
+after they confirm they want the exception.
 
 When the user's input states or implies a standing practice, propose how
 we write it, in wording another repository could reuse. A correction counts
