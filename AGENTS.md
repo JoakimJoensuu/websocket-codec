@@ -4,11 +4,17 @@
 
 Read and follow:
 - [CONVENTIONS.md](CONVENTIONS.md)
-- [`.clang-format`](.clang-format)
-- [`.clang-tidy`](.clang-tidy)
+- [.clang-format](.clang-format)
+- [.clang-tidy](.clang-tidy)
+- [README.md](README.md)
 
-They apply to the files and commits you write. If a change goes against a
-convention, say so; if it is meant to stand, propose the replacement.
+They apply to the files and commits you write, and to how you work in this
+codebase. If a change goes against what they say, say so; if it is meant to
+stand, propose the replacement.
+
+If a request or suggestion goes against a common idiom or convention, say
+so and keep the idiom. Do that even when they ask directly. Change it only
+after they confirm they want the exception.
 
 When the user's input states or implies a standing practice, propose how
 we write it, in wording another repository could reuse. A correction counts
@@ -21,8 +27,8 @@ Every change to these documents needs approval first: a new convention, a
 replacement, a document added to the list, a link that no longer points
 anywhere. Do not wait for an answer. Finish the task, then put the
 proposal last in your reply under the heading "Proposed", so it is easy
-to find and quote. Do not edit until it is accepted; a direct request
-already counts.
+to find and quote. Name the file and quote the wording. Do not edit until
+it is accepted; a direct request already counts.
 
 An agent-suggested change that is not the current task goes on a
 new branch.
