@@ -1,4 +1,37 @@
-Checks: '*'
+Checks: >
+  *,
+  -llvmlibc-restrict-system-libc-headers,
+  -altera-*,
+  -clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling,
+  -llvm-header-guard,
+  -*-braces-around-statements
 WarningsAsErrors: '*'
 HeaderFilterRegex: '.*'
 FormatStyle: file
+CustomChecks:
+  - Name: implicit-pointer-to-bool-conversion
+    Query: |
+      let Ptr ignoringParenImpCasts(expr(hasType(qualType(hasCanonicalType(pointerType())))))
+      match stmt(anyOf(
+        unaryOperator(hasOperatorName("!"), hasUnaryOperand(Ptr)).bind("ptr-bool"),
+        binaryOperator(hasAnyOperatorName("&&", "||"), hasEitherOperand(Ptr)).bind("ptr-bool"),
+        conditionalOperator(hasCondition(Ptr)).bind("ptr-bool"),
+        ifStmt(hasCondition(allOf(Ptr, expr().bind("ptr-bool")))),
+        whileStmt(hasCondition(allOf(Ptr, expr().bind("ptr-bool")))),
+        doStmt(hasCondition(allOf(Ptr, expr().bind("ptr-bool")))),
+        forStmt(hasCondition(allOf(Ptr, expr().bind("ptr-bool"))))
+      ))
+    Diagnostic:
+      - BindName: ptr-bool
+        Message: compare with nullptr
+        Level: Warning
+  - Name: short-field-name
+    Query: |
+      match fieldDecl(matchesName("(^|::).{1,2}$")).bind("field")
+    Diagnostic:
+      - BindName: field
+        Message: field name is too short, expected at least 3 characters
+        Level: Warning
+CheckOptions:
+  readability-identifier-length.IgnoredVariableNames: '^i$'
+  readability-implicit-bool-conversion.AllowLogicalOperatorConversion: true

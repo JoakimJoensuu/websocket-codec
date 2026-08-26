@@ -23,6 +23,10 @@ Programming errors abort, expected failures still return an error.
 
 In libraries, prefix only what is exposed.
 
+Do not typedef structs or enums.
+
+Use `_cnt` for item counts and `_len` for sequence length.
+
 ## Functions
 
 Do not use a boolean parameter to choose between two operations. Use two
@@ -31,7 +35,8 @@ functions. A flag on one operation is fine.
 ## Comments
 
 Comment only what names, types, and control flow cannot say. When a public
-declaration needs a comment, write it there, not on the definition.
+declaration needs a comment, write it there in Doxygen style, not on the
+definition.
 
 ## Tests
 
