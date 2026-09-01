@@ -46,16 +46,14 @@ jobs:
         with:
           path: ${{ runner.temp }}/clang
           key: clang-23.1.0-${{ runner.os }}-tidy-format-v3
+      - run: cmake -B build
       - run: |
           export PATH="${{ runner.temp }}/clang/bin:$PATH"
           export LD_LIBRARY_PATH="${{ runner.temp }}/clang/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
           clang-format --version
           clang-tidy --version
           sources=$(find include src examples tests -type f -name '*.[ch]' 2>/dev/null | sort)
-          units=
-          if [ -f compile_commands.json ]; then
-            units=$(jq -r '.[].file' compile_commands.json)
-          fi
+          units=$(jq -r '.[].file' compile_commands.json)
           set +e
           if [ -n "$sources" ]; then
             clang-format --dry-run --Werror $sources | tee "$RUNNER_TEMP/format.log"
@@ -80,3 +78,11 @@ jobs:
             if [ ! -s "$RUNNER_TEMP/tidy.log" ]; then echo ok; else echo '```'; cat "$RUNNER_TEMP/tidy.log"; echo '```'; fi
           } >>"$GITHUB_STEP_SUMMARY"
           test "$fmt" -eq 0 && test "$tidy" -eq 0
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - run: cmake -B build
+      - run: cmake --build build
+      - run: ctest --test-dir build --output-on-failure
