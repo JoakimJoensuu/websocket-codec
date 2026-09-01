@@ -65,17 +65,7 @@ struct wsc_encoding_result wsc_encode(const struct wsc_frame *frame);
  * wsc_decoder_destroy does not free @p buf.
  */
 struct wsc_decoder *wsc_decoder_create(void *buf, size_t capacity);
-#endif
 
-/**
- * @param decoder May be nullptr.
- */
-void wsc_decoder_destroy(struct wsc_decoder *decoder);
-
-size_t wsc_encoded_len(const struct wsc_frame *frame);
-
-#ifdef WSC_HOSTED
-#else
 /**
  * Write one frame into @p dst.
  *
@@ -84,6 +74,13 @@ size_t wsc_encoded_len(const struct wsc_frame *frame);
  */
 size_t wsc_encode(uint8_t *dst, size_t dst_capacity, const struct wsc_frame *frame);
 #endif
+
+/**
+ * @param decoder May be nullptr.
+ */
+void wsc_decoder_destroy(struct wsc_decoder *decoder);
+
+size_t wsc_encoded_len(const struct wsc_frame *frame);
 
 /**
  * Parse @p src. Incomplete frames stay in the decoder.
