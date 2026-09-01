@@ -9,7 +9,7 @@ int main() {
   struct wsc_frame frame = {
       .payload = hello,
       .payload_len = sizeof(hello) - 1,
-      .opcode = WSC_OP_TEXT,
+      .opcode = WSC_OPCODE_TEXT,
       .fin = true,
   };
   struct wsc_decoder *decoder = wsc_decoder_create();

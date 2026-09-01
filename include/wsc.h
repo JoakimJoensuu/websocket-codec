@@ -12,12 +12,12 @@
 enum : unsigned { WSC_MASKING_KEY_LEN = 4 };
 
 enum wsc_opcode : uint8_t {
-  WSC_OP_CONT  = 0x0,
-  WSC_OP_TEXT  = 0x1,
-  WSC_OP_BIN   = 0x2,
-  WSC_OP_CLOSE = 0x8,
-  WSC_OP_PING  = 0x9,
-  WSC_OP_PONG  = 0xA,
+  WSC_OPCODE_CONTINUATION = 0x0,
+  WSC_OPCODE_TEXT         = 0x1,
+  WSC_OPCODE_BINARY       = 0x2,
+  WSC_OPCODE_CLOSE        = 0x8,
+  WSC_OPCODE_PING         = 0x9,
+  WSC_OPCODE_PONG         = 0xA,
 };
 
 enum wsc_err {
@@ -78,11 +78,6 @@ size_t wsc_encoded_len(const struct wsc_frame *frame);
 #endif
 
 /**
- * @param decoder May be nullptr.
- */
-void wsc_decoder_destroy(struct wsc_decoder *decoder);
-
-/**
  * Parse @p src. Incomplete frames stay in the decoder.
  *
  * Completed frames are copied and unmasked. They are valid until the next
@@ -90,5 +85,10 @@ void wsc_decoder_destroy(struct wsc_decoder *decoder);
  */
 struct wsc_decoding_result wsc_decoder_feed(struct wsc_decoder *decoder, const uint8_t *src,
                                             size_t length);
+
+/**
+ * @param decoder May be nullptr.
+ */
+void wsc_decoder_destroy(struct wsc_decoder *decoder);
 
 #endif /* WSC_H */

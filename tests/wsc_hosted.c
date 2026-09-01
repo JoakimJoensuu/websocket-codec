@@ -58,7 +58,7 @@ static void roundtrip_split(const struct wsc_frame *want, size_t first) {
 Ensure(rfc_unmasked_hello) {
   const uint8_t wire[] = {0x81, 0x05, 0x48, 0x65, 0x6c, 0x6c, 0x6f};
   const uint8_t hello[] = {'H', 'e', 'l', 'l', 'o'};
-  struct wsc_frame want = wsc_test_make_frame(true, WSC_OP_TEXT, hello, sizeof(hello), nullptr);
+  struct wsc_frame want = wsc_test_make_frame(true, WSC_OPCODE_TEXT, hello, sizeof(hello), nullptr);
   struct wsc_decoder *decoder = wsc_decoder_create();
   struct wsc_decoding_result result;
   assert_that(decoder, is_non_null);
@@ -73,7 +73,7 @@ Ensure(rfc_masked_hello) {
   const uint8_t wire[] = {0x81, 0x85, 0x37, 0xfa, 0x21, 0x3d, 0x7f, 0x9f, 0x4d, 0x51, 0x58};
   const uint8_t hello[] = {'H', 'e', 'l', 'l', 'o'};
   const uint8_t key[] = {0x37, 0xfa, 0x21, 0x3d};
-  struct wsc_frame want = wsc_test_make_frame(true, WSC_OP_TEXT, hello, sizeof(hello), key);
+  struct wsc_frame want = wsc_test_make_frame(true, WSC_OPCODE_TEXT, hello, sizeof(hello), key);
   struct wsc_decoder *decoder = wsc_decoder_create();
   struct wsc_decoding_result result;
   assert_that(decoder, is_non_null);
@@ -100,9 +100,9 @@ Ensure(roundtrip_sizes) {
         payload[i] = (uint8_t)(i * 3U);
       }
     }
-    frame = wsc_test_make_frame(true, WSC_OP_BIN, payload, length, nullptr);
+    frame = wsc_test_make_frame(true, WSC_OPCODE_BINARY, payload, length, nullptr);
     roundtrip(&frame);
-    frame = wsc_test_make_frame(true, WSC_OP_BIN, payload, length, key);
+    frame = wsc_test_make_frame(true, WSC_OPCODE_BINARY, payload, length, key);
     roundtrip(&frame);
     free(payload);
   }
@@ -117,14 +117,14 @@ Ensure(header_length_bytes) {
   uint8_t *buf = nullptr;
 
   memset(mid, WSC_TEST_FILL_MID, sizeof(mid));
-  frame = wsc_test_make_frame(true, WSC_OP_BIN, &one, 1, nullptr);
+  frame = wsc_test_make_frame(true, WSC_OPCODE_BINARY, &one, 1, nullptr);
   buf = encode_buf(&frame, &wire_length);
   assert_that(wire_length, is_equal_to(WSC_TEST_HEADER_BASE + 1));
   assert_that((buf[1] & WSC_TEST_MASK_BIT), is_equal_to(0));
   assert_that((buf[1] & WSC_TEST_LEN7_MASK), is_equal_to(1));
   free(buf);
 
-  frame = wsc_test_make_frame(true, WSC_OP_BIN, mid, sizeof(mid), nullptr);
+  frame = wsc_test_make_frame(true, WSC_OPCODE_BINARY, mid, sizeof(mid), nullptr);
   buf = encode_buf(&frame, &wire_length);
   assert_that(wire_length, is_equal_to(WSC_TEST_HEADER_BASE + WSC_TEST_LEN16_EXT + sizeof(mid)));
   assert_that(buf[1], is_equal_to(WSC_TEST_LEN16));
@@ -133,7 +133,7 @@ Ensure(header_length_bytes) {
   wide = (uint8_t *)malloc((size_t)UINT16_MAX + 1);
   assert_that(wide, is_non_null);
   memset(wide, WSC_TEST_FILL_WIDE, (size_t)UINT16_MAX + 1);
-  frame = wsc_test_make_frame(true, WSC_OP_BIN, wide, (size_t)UINT16_MAX + 1, nullptr);
+  frame = wsc_test_make_frame(true, WSC_OPCODE_BINARY, wide, (size_t)UINT16_MAX + 1, nullptr);
   buf = encode_buf(&frame, &wire_length);
   assert_that(wire_length,
               is_equal_to(WSC_TEST_HEADER_BASE + WSC_TEST_LEN64_EXT + (size_t)UINT16_MAX + 1));
@@ -145,7 +145,7 @@ Ensure(header_length_bytes) {
 Ensure(split_and_empty_feed) {
   const uint8_t hello[] = {'h', 'i'};
   const uint8_t key[] = {9, 8, 7, 6};
-  struct wsc_frame want = wsc_test_make_frame(true, WSC_OP_TEXT, hello, sizeof(hello), key);
+  struct wsc_frame want = wsc_test_make_frame(true, WSC_OPCODE_TEXT, hello, sizeof(hello), key);
   size_t wire_length = 0;
   uint8_t *buf = encode_buf(&want, &wire_length);
   struct wsc_decoder *decoder = wsc_decoder_create();
@@ -175,7 +175,7 @@ Ensure(split_and_empty_feed) {
 Ensure(byte_at_a_time) {
   const uint8_t hello[] = {'h', 'i', '!'};
   const uint8_t key[] = {0x11, 0x22, 0x33, 0x44};
-  struct wsc_frame want = wsc_test_make_frame(true, WSC_OP_TEXT, hello, sizeof(hello), key);
+  struct wsc_frame want = wsc_test_make_frame(true, WSC_OPCODE_TEXT, hello, sizeof(hello), key);
   size_t wire_length = 0;
   uint8_t *buf = encode_buf(&want, &wire_length);
   struct wsc_decoder *decoder = wsc_decoder_create();
@@ -201,9 +201,9 @@ Ensure(rsv_opcode_fin) {
   frame.rsv1 = true;
   frame.rsv3 = true;
   roundtrip(&frame);
-  frame = wsc_test_make_frame(true, WSC_OP_PING, payload, sizeof(payload), nullptr);
+  frame = wsc_test_make_frame(true, WSC_OPCODE_PING, payload, sizeof(payload), nullptr);
   roundtrip(&frame);
-  frame = wsc_test_make_frame(false, WSC_OP_CLOSE, payload, sizeof(payload), nullptr);
+  frame = wsc_test_make_frame(false, WSC_OPCODE_CLOSE, payload, sizeof(payload), nullptr);
   roundtrip(&frame);
 }
 
@@ -211,9 +211,9 @@ Ensure(two_frames_one_feed) {
   const uint8_t first_payload[] = {'a'};
   const uint8_t second_payload[] = {'b', 'b'};
   struct wsc_frame first =
-      wsc_test_make_frame(true, WSC_OP_TEXT, first_payload, sizeof(first_payload), nullptr);
+      wsc_test_make_frame(true, WSC_OPCODE_TEXT, first_payload, sizeof(first_payload), nullptr);
   struct wsc_frame second =
-      wsc_test_make_frame(true, WSC_OP_BIN, second_payload, sizeof(second_payload), nullptr);
+      wsc_test_make_frame(true, WSC_OPCODE_BINARY, second_payload, sizeof(second_payload), nullptr);
   size_t first_length = 0;
   size_t second_length = 0;
   uint8_t *first_buf = encode_buf(&first, &first_length);
@@ -239,7 +239,7 @@ Ensure(two_frames_one_feed) {
 Ensure(non_minimal_len16) {
   uint8_t buf[WSC_TEST_HEADER_BASE + WSC_TEST_LEN16_EXT + 1];
   const uint8_t payload[] = {0x01};
-  size_t wire_length = wsc_test_craft(buf, sizeof(buf), true, 0, WSC_OP_BIN, nullptr,
+  size_t wire_length = wsc_test_craft(buf, sizeof(buf), true, 0, WSC_OPCODE_BINARY, nullptr,
                                       WSC_TEST_LEN16, payload, sizeof(payload));
   struct wsc_decoder *decoder = wsc_decoder_create();
   struct wsc_decoding_result result;
@@ -255,7 +255,7 @@ Ensure(non_minimal_len16) {
 Ensure(non_minimal_len64) {
   uint8_t buf[WSC_TEST_HEADER_BASE + WSC_TEST_LEN64_EXT + 1];
   const uint8_t payload[] = {0x11};
-  size_t wire_length = wsc_test_craft(buf, sizeof(buf), true, 0, WSC_OP_BIN, nullptr,
+  size_t wire_length = wsc_test_craft(buf, sizeof(buf), true, 0, WSC_OPCODE_BINARY, nullptr,
                                       WSC_TEST_LEN64, payload, sizeof(payload));
   struct wsc_decoder *decoder = wsc_decoder_create();
   struct wsc_decoding_result result;
@@ -270,7 +270,7 @@ Ensure(len64_msb) {
   struct wsc_decoder *decoder = wsc_decoder_create();
   struct wsc_decoding_result result;
   memset(buf, 0, sizeof(buf));
-  buf[0] = (uint8_t)(WSC_TEST_FIN_BIT | WSC_OP_BIN);
+  buf[0] = (uint8_t)(WSC_TEST_FIN_BIT | WSC_OPCODE_BINARY);
   buf[1] = WSC_TEST_LEN64;
   buf[2] = WSC_TEST_LEN64_MSB_BYTE;
   assert_that(decoder, is_non_null);
@@ -283,9 +283,10 @@ Ensure(masked_raw_header) {
   const uint8_t key[] = {0x01, 0x02, 0x03, 0x04};
   const uint8_t payload[] = {0x10, 0x20, 0x30, 0x40, 0x50};
   uint8_t buf[WSC_TEST_HEADER_BASE + WSC_MASKING_KEY_LEN + sizeof(payload)];
-  size_t wire_length = wsc_test_craft(buf, sizeof(buf), true, 0, WSC_OP_BIN, key,
+  size_t wire_length = wsc_test_craft(buf, sizeof(buf), true, 0, WSC_OPCODE_BINARY, key,
                                       (unsigned)sizeof(payload), payload, sizeof(payload));
-  struct wsc_frame want = wsc_test_make_frame(true, WSC_OP_BIN, payload, sizeof(payload), key);
+  struct wsc_frame want =
+      wsc_test_make_frame(true, WSC_OPCODE_BINARY, payload, sizeof(payload), key);
   struct wsc_decoder *decoder = wsc_decoder_create();
   struct wsc_decoding_result result;
   assert_that(decoder, is_non_null);
