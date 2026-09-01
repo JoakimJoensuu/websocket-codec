@@ -122,7 +122,7 @@ void wsc_decoder_free(struct wsc_decoder *decoder) {
   (void)decoder;
 }
 
-struct wsc_decoder *wsc_decoder_create_into(void *buf, size_t capacity) {
+struct wsc_decoder *wsc_decoder_create(void *buf, size_t capacity) {
   uint8_t *raw = nullptr;
   size_t align = alignof(struct wsc_decoder);
   size_t skip = 0;

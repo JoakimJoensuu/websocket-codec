@@ -102,4 +102,6 @@ void wsc_payload_emitted(struct wsc_decoder *decoder);
 
 void wsc_decoder_free(struct wsc_decoder *decoder);
 
+size_t wsc_encode_buffer(uint8_t *dst, size_t dst_capacity, const struct wsc_frame *frame);
+
 #endif /* WSC_INTERNAL_H */

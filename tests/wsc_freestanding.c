@@ -20,14 +20,14 @@ struct decoder_ctx {
 };
 
 static struct wsc_decoder *decoder_open(struct decoder_ctx *ctx) {
-  return wsc_decoder_create_into(ctx->storage, sizeof(ctx->storage));
+  return wsc_decoder_create(ctx->storage, sizeof(ctx->storage));
 }
 
 static uint8_t *encode_buf(const struct wsc_frame *frame, size_t *wire_length) {
   size_t encoded_length = wsc_encoded_len(frame);
   uint8_t *wire = (uint8_t *)malloc(encoded_length);
   assert_that(wire, is_non_null);
-  *wire_length = wsc_encode_into(wire, encoded_length, frame);
+  *wire_length = wsc_encode(wire, encoded_length, frame);
   return wire;
 }
 
@@ -315,7 +315,7 @@ Ensure(masked_raw_header) {
 
 Ensure(decoder_into_too_small) {
   uint8_t storage[WSC_TEST_INTO_TOO_SMALL];
-  assert_that(wsc_decoder_create_into(storage, sizeof(storage)), is_null);
+  assert_that(wsc_decoder_create(storage, sizeof(storage)), is_null);
 }
 
 Ensure(decoder_into_roundtrip_and_split) {
@@ -325,7 +325,7 @@ Ensure(decoder_into_roundtrip_and_split) {
   size_t wire_length = 0;
   uint8_t *buf = encode_buf(&want, &wire_length);
   uint8_t storage[WSC_TEST_INTO_ARENA];
-  struct wsc_decoder *decoder = wsc_decoder_create_into(storage, sizeof(storage));
+  struct wsc_decoder *decoder = wsc_decoder_create(storage, sizeof(storage));
   struct wsc_decoding_result result;
   assert_that(decoder, is_non_null);
 
@@ -359,7 +359,7 @@ Ensure(decoder_into_two_frames) {
   uint8_t *second_buf = encode_buf(&second, &second_length);
   uint8_t *both = (uint8_t *)malloc(first_length + second_length);
   uint8_t storage[WSC_TEST_INTO_ARENA];
-  struct wsc_decoder *decoder = wsc_decoder_create_into(storage, sizeof(storage));
+  struct wsc_decoder *decoder = wsc_decoder_create(storage, sizeof(storage));
   struct wsc_decoding_result result;
   assert_that(both, is_non_null);
   assert_that(decoder, is_non_null);
@@ -389,7 +389,7 @@ Ensure(decoder_into_complete_then_split) {
   uint8_t *second_buf = encode_buf(&second, &second_length);
   uint8_t *both = (uint8_t *)malloc(first_length + second_length);
   uint8_t storage[WSC_TEST_INTO_ARENA];
-  struct wsc_decoder *decoder = wsc_decoder_create_into(storage, sizeof(storage));
+  struct wsc_decoder *decoder = wsc_decoder_create(storage, sizeof(storage));
   struct wsc_decoding_result result;
   assert_that(both, is_non_null);
   assert_that(decoder, is_non_null);
@@ -419,7 +419,7 @@ Ensure(decoder_into_no_memory) {
   size_t wire_length = 0;
   uint8_t *buf = encode_buf(&frame, &wire_length);
   uint8_t storage[WSC_TEST_INTO_TIGHT];
-  struct wsc_decoder *decoder = wsc_decoder_create_into(storage, sizeof(storage));
+  struct wsc_decoder *decoder = wsc_decoder_create(storage, sizeof(storage));
   struct wsc_decoding_result result;
   if (decoder == nullptr) {
     free(buf);

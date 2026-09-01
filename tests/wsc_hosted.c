@@ -296,25 +296,6 @@ Ensure(masked_raw_header) {
   wsc_decoder_destroy(decoder);
 }
 
-Ensure(encode_into_matches_encode) {
-  const uint8_t payload[] = {0x10, 0x20, 0x30, 0x40, 0x50};
-  const uint8_t key[] = {0x01, 0x02, 0x03, 0x04};
-  struct wsc_frame frame = wsc_test_make_frame(true, WSC_OP_BIN, payload, sizeof(payload), key);
-  struct wsc_encoding_result encoded = wsc_encode(&frame);
-  size_t encoded_length = wsc_encoded_len(&frame);
-  uint8_t *into = (uint8_t *)malloc(encoded_length);
-  size_t wrote = 0;
-
-  assert_that(encoded.err, is_equal_to(WSC_OK));
-  assert_that(into, is_non_null);
-  wrote = wsc_encode_into(into, encoded_length, &frame);
-  assert_that(wrote, is_equal_to(encoded_length));
-  assert_that(encoded.data_len, is_equal_to(encoded_length));
-  assert_that(memcmp(into, encoded.data, encoded_length), is_equal_to(0));
-  free(into);
-  free(encoded.data);
-}
-
 int main() {
   auto suite = create_test_suite();
   add_test(suite, rfc_unmasked_hello);
@@ -329,7 +310,6 @@ int main() {
   add_test(suite, non_minimal_len64);
   add_test(suite, len64_msb);
   add_test(suite, masked_raw_header);
-  add_test(suite, encode_into_matches_encode);
   auto reporter = create_text_reporter();
   int result = run_test_suite(suite, reporter);
   destroy_test_suite(suite);

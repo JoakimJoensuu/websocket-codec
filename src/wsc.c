@@ -129,7 +129,7 @@ size_t wsc_encoded_len(const struct wsc_frame *frame) {
   return encoded_length(frame);
 }
 
-size_t wsc_encode_into(uint8_t *dst, size_t dst_capacity, const struct wsc_frame *frame) {
+size_t wsc_encode_buffer(uint8_t *dst, size_t dst_capacity, const struct wsc_frame *frame) {
   size_t total = encoded_length(frame);
   if (dst == nullptr) {
     wsc_trap();
@@ -139,6 +139,12 @@ size_t wsc_encode_into(uint8_t *dst, size_t dst_capacity, const struct wsc_frame
   }
   return write_frame(dst, frame);
 }
+
+#ifndef WSC_HOSTED
+size_t wsc_encode(uint8_t *dst, size_t dst_capacity, const struct wsc_frame *frame) {
+  return wsc_encode_buffer(dst, dst_capacity, frame);
+}
+#endif
 
 static struct wsc_decoding_result make_result(struct wsc_decoder *decoder) {
   struct wsc_decoding_result result;

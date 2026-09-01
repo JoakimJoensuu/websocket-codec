@@ -6,15 +6,24 @@ reassembly. API in [include/wsc.h](include/wsc.h).
 
 ## Build
 
+Hosted:
+
 ```sh
 cmake -B build && cmake --build build && ctest --test-dir build
+```
+
+Freestanding:
+
+```sh
+cmake -B build -DWSC_HOSTED=OFF && cmake --build build && ctest --test-dir build
 ```
 
 See [CMakeLists.txt](CMakeLists.txt) and [tests/CMakeLists.txt](tests/CMakeLists.txt) for
 options and dependencies.
 
 `WSC_HOSTED` (default ON) selects a heap-backed decoder and `wsc_encode`. When OFF, the
-library is freestanding: `wsc_decoder_create_into` and ringalloc only.
+library is freestanding: `wsc_decoder_create` with a caller buffer, ringalloc for decode,
+and `wsc_encode` into a caller buffer.
 
 ## Style
 

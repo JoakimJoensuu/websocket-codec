@@ -107,6 +107,6 @@ struct wsc_encoding_result wsc_encode(const struct wsc_frame *frame) {
     result.data_len = 0;
     return result;
   }
-  wsc_encode_into(result.data, total, frame);
+  wsc_encode_buffer(result.data, total, frame);
   return result;
 }
