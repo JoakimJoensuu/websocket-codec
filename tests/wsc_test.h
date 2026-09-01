@@ -1,16 +1,8 @@
 #ifndef WSC_TEST_H
 #define WSC_TEST_H
 
-#include <wsc.h>
-
-#include <cgreen/assertions.h>
-#include <cgreen/constraint_syntax_helpers.h>
-#include <stdint.h>
-#include <stdlib.h>
-#include <string.h>
-
 enum : unsigned {
-  WSC_TEST_HDR_BASE       = 2,
+  WSC_TEST_HEADER_BASE    = 2,
   WSC_TEST_LEN16_EXT      = 2,
   WSC_TEST_LEN64_EXT      = 8,
   WSC_TEST_LEN7_MAX       = 125,
@@ -37,12 +29,12 @@ enum : uint8_t {
 
 enum : unsigned { WSC_TEST_BYTE_BITS = 8 };
 
-static inline void wsc_test_wr16(uint8_t *dst, uint16_t value) {
+static inline void wsc_test_write_uint16(uint8_t *dst, uint16_t value) {
   dst[0] = (uint8_t)((unsigned)value >> WSC_TEST_BYTE_BITS);
   dst[1] = (uint8_t)value;
 }
 
-static inline void wsc_test_wr64(uint8_t *dst, uint64_t value) {
+static inline void wsc_test_write_uint64(uint8_t *dst, uint64_t value) {
   for (int i = (int)sizeof(uint64_t) - 1; i >= 0; i--) {
     dst[i] = (uint8_t)value;
     value >>= WSC_TEST_BYTE_BITS;
@@ -56,10 +48,10 @@ static inline void wsc_test_xor_mask(uint8_t *data, size_t length,
   }
 }
 
-static inline size_t wsc_test_craft(uint8_t *dst, size_t dst_cap, bool fin, unsigned rsv,
+static inline size_t wsc_test_craft(uint8_t *dst, size_t dst_capacity, bool fin, unsigned rsv,
                                     uint8_t opcode, const uint8_t *masking_key, unsigned len7,
                                     const uint8_t *payload, size_t payload_len) {
-  size_t header_length = WSC_TEST_HDR_BASE;
+  size_t header_length = WSC_TEST_HEADER_BASE;
   size_t total = 0;
 
   if (len7 == WSC_TEST_LEN16) {
@@ -71,15 +63,15 @@ static inline size_t wsc_test_craft(uint8_t *dst, size_t dst_cap, bool fin, unsi
     header_length += WSC_MASKING_KEY_LEN;
   }
   total = header_length + payload_len;
-  assert_that(total <= dst_cap, is_true);
+  assert_that(total <= dst_capacity, is_true);
 
   dst[0] = (uint8_t)((fin ? (unsigned)WSC_TEST_FIN_BIT : 0U) | ((rsv << 4U) & WSC_TEST_RSV_MASK) |
                      ((unsigned)opcode & (unsigned)WSC_TEST_OPCODE_MASK));
   dst[1] = (uint8_t)len7;
   if (len7 == WSC_TEST_LEN16) {
-    wsc_test_wr16(dst + WSC_TEST_HDR_BASE, (uint16_t)payload_len);
+    wsc_test_write_uint16(dst + WSC_TEST_HEADER_BASE, (uint16_t)payload_len);
   } else if (len7 == WSC_TEST_LEN64) {
-    wsc_test_wr64(dst + WSC_TEST_HDR_BASE, (uint64_t)payload_len);
+    wsc_test_write_uint64(dst + WSC_TEST_HEADER_BASE, (uint64_t)payload_len);
   } else {
     dst[1] = (uint8_t)payload_len;
   }
@@ -96,28 +88,29 @@ static inline size_t wsc_test_craft(uint8_t *dst, size_t dst_cap, bool fin, unsi
   return total;
 }
 
-static inline void wsc_test_assert_frame(const struct wsc_frame *got, const struct wsc_frame *want) {
-  assert_that(got->fin, is_equal_to(want->fin));
-  assert_that(got->rsv1, is_equal_to(want->rsv1));
-  assert_that(got->rsv2, is_equal_to(want->rsv2));
-  assert_that(got->rsv3, is_equal_to(want->rsv3));
-  assert_that(got->opcode, is_equal_to(want->opcode));
-  assert_that(got->masked, is_equal_to(want->masked));
-  assert_that(got->payload_len, is_equal_to(want->payload_len));
-  if (want->payload_len > 0) {
-    assert_that(got->payload, is_non_null);
-    assert_that(memcmp(got->payload, want->payload, want->payload_len), is_equal_to(0));
+static inline void wsc_test_assert_frame(const struct wsc_frame *actual,
+                                         const struct wsc_frame *expected) {
+  assert_that(actual->fin, is_equal_to(expected->fin));
+  assert_that(actual->rsv1, is_equal_to(expected->rsv1));
+  assert_that(actual->rsv2, is_equal_to(expected->rsv2));
+  assert_that(actual->rsv3, is_equal_to(expected->rsv3));
+  assert_that(actual->opcode, is_equal_to(expected->opcode));
+  assert_that(actual->masked, is_equal_to(expected->masked));
+  assert_that(actual->payload_len, is_equal_to(expected->payload_len));
+  if (expected->payload_len > 0) {
+    assert_that(actual->payload, is_non_null);
+    assert_that(memcmp(actual->payload, expected->payload, expected->payload_len), is_equal_to(0));
   } else {
-    assert_that(got->payload, is_null);
+    assert_that(actual->payload, is_null);
   }
-  if (want->masked) {
-    assert_that(memcmp(got->masking_key, want->masking_key, WSC_MASKING_KEY_LEN), is_equal_to(0));
+  if (expected->masked) {
+    assert_that(memcmp(actual->masking_key, expected->masking_key, WSC_MASKING_KEY_LEN),
+                is_equal_to(0));
   }
 }
 
 static inline struct wsc_frame wsc_test_make_frame(bool fin, uint8_t opcode, const uint8_t *payload,
-                                                   size_t payload_len,
-                                                   const uint8_t *masking_key) {
+                                                   size_t payload_len, const uint8_t *masking_key) {
   struct wsc_frame frame;
   memset(&frame, 0, sizeof(frame));
   frame.payload = payload;

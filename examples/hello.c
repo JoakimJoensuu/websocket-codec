@@ -12,26 +12,26 @@ int main() {
       .opcode = WSC_OP_TEXT,
       .fin = true,
   };
-  struct wsc_decoder *dec = wsc_decoder_create();
+  struct wsc_decoder *decoder = wsc_decoder_create();
   struct wsc_encoding_result encoded;
   struct wsc_decoding_result result;
 
-  if (dec == nullptr) {
+  if (decoder == nullptr) {
     return 1;
   }
   encoded = wsc_encode(&frame);
   if (encoded.err != WSC_OK) {
-    wsc_decoder_destroy(dec);
+    wsc_decoder_destroy(decoder);
     return 1;
   }
-  result = wsc_decoder_feed(dec, encoded.data, encoded.data_len);
-  if (result.err != WSC_OK || result.frames_cnt != 1) {
+  result = wsc_decoder_feed(decoder, encoded.data, encoded.data_len);
+  if (result.err != WSC_OK || result.frames_count != 1) {
     free(encoded.data);
-    wsc_decoder_destroy(dec);
+    wsc_decoder_destroy(decoder);
     return 1;
   }
   printf("%.*s\n", (int)result.frames[0].payload_len, (const char *)result.frames[0].payload);
   free(encoded.data);
-  wsc_decoder_destroy(dec);
+  wsc_decoder_destroy(decoder);
   return 0;
 }

@@ -13,10 +13,10 @@
 #endif
 
 enum : unsigned {
-  WSC_HDR_BASE  = 2,
-  WSC_LEN16_EXT = 2,
-  WSC_LEN64_EXT = 8,
-  WSC_HDR_MAX   = WSC_HDR_BASE + WSC_LEN64_EXT + WSC_MASKING_KEY_LEN,
+  WSC_HEADER_BASE = 2,
+  WSC_LEN16_EXT   = 2,
+  WSC_LEN64_EXT   = 8,
+  WSC_HEADER_MAX  = WSC_HEADER_BASE + WSC_LEN64_EXT + WSC_MASKING_KEY_LEN,
 };
 
 enum : unsigned {
@@ -44,29 +44,29 @@ enum : unsigned {
 
 enum : unsigned { WSC_BYTE_BITS = CHAR_BIT };
 
-enum wsc_parse_st { WSC_ST_HDR = 0, WSC_ST_PAYLOAD, WSC_ST_DEAD };
+enum wsc_parse_st { WSC_ST_HEADER = 0, WSC_ST_PAYLOAD, WSC_ST_DEAD };
 
-struct wsc_buf {
+struct wsc_buffer {
   uint8_t *data;
   size_t length;
-  size_t cap;
+  size_t capacity;
 };
 
 struct wsc_decoder {
   uint64_t payload_len;
-  uint64_t payload_got;
-  struct wsc_buf payload;
+  uint64_t payload_received;
+  struct wsc_buffer payload;
 #ifndef WSC_HOSTED
   struct ringalloc *ringalloc;
   size_t alloc_count;
 #endif
   struct wsc_frame *frames;
   size_t frames_count;
-  size_t frames_cap;
-  size_t hdr_got;
-  size_t hdr_need;
+  size_t frames_capacity;
+  size_t header_received;
+  size_t header_total;
   enum wsc_parse_st state;
-  unsigned mask_off;
+  unsigned mask_offset;
   enum wsc_err last_err;
   bool fin;
   bool rsv1;
@@ -75,7 +75,7 @@ struct wsc_decoder {
   bool masked;
   uint8_t opcode;
   uint8_t masking_key[WSC_MASKING_KEY_LEN];
-  uint8_t hdr[WSC_HDR_MAX];
+  uint8_t header[WSC_HEADER_MAX];
 };
 
 #ifdef WSC_HOSTED
@@ -85,19 +85,20 @@ struct wsc_decoder {
 #define wsc_trap() unreachable()
 #endif
 
-void wsc_decoder_state_init(struct wsc_decoder *dec);
+void wsc_decoder_state_init(struct wsc_decoder *decoder);
 
-int wsc_buf_reserve(struct wsc_decoder *dec, struct wsc_buf *buf, size_t need);
+int wsc_buffer_reserve(struct wsc_decoder *decoder, struct wsc_buffer *buffer,
+                       size_t minimum_capacity);
 
-void wsc_clear_frames(struct wsc_decoder *dec);
+void wsc_clear_frames(struct wsc_decoder *decoder);
 
-int wsc_frames_reserve(struct wsc_decoder *dec, size_t cap);
+int wsc_frames_reserve(struct wsc_decoder *decoder, size_t capacity);
 
-enum wsc_err wsc_attach_payload(struct wsc_decoder *dec, struct wsc_frame *frame);
+enum wsc_err wsc_attach_payload(struct wsc_decoder *decoder, struct wsc_frame *frame);
 
 void wsc_discard_payload(struct wsc_frame *frame);
 
-void wsc_payload_emitted(struct wsc_decoder *dec);
+void wsc_payload_emitted(struct wsc_decoder *decoder);
 
 void wsc_decoder_free(struct wsc_decoder *decoder);
 

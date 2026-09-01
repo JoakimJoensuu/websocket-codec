@@ -4,7 +4,7 @@ Do not restate language or protocol standards.
 
 ## Language
 
-ISO C23. No extensions.
+Library source is ISO C23. No extensions.
 
 With `WSC_HOSTED=ON` (default), the library is hosted. With `WSC_HOSTED=OFF`, it is
 freestanding and uses ringalloc for the decoder.

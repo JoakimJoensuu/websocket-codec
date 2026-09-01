@@ -48,7 +48,7 @@ struct wsc_encoding_result {
 struct wsc_decoding_result {
   enum wsc_err err;
   const struct wsc_frame *frames;
-  size_t frames_cnt;
+  size_t frames_count;
 };
 
 struct wsc_decoder;
@@ -64,7 +64,7 @@ struct wsc_encoding_result wsc_encode(const struct wsc_frame *frame);
  * Decoder and its allocations come from @p buf. nullptr if @p buf is too small.
  * wsc_decoder_destroy does not free @p buf.
  */
-struct wsc_decoder *wsc_decoder_create_into(void *buf, size_t cap);
+struct wsc_decoder *wsc_decoder_create_into(void *buf, size_t capacity);
 #endif
 
 /**
@@ -77,10 +77,10 @@ size_t wsc_encoded_len(const struct wsc_frame *frame);
 /**
  * Write one frame into @p dst.
  *
- * @p dst_cap must be at least wsc_encoded_len(@p frame). If @c frame->masked,
+ * @p dst_capacity must be at least wsc_encoded_len(@p frame). If @c frame->masked,
  * the payload is masked with @c frame->masking_key; otherwise it is not masked.
  */
-size_t wsc_encode_into(uint8_t *dst, size_t dst_cap, const struct wsc_frame *frame);
+size_t wsc_encode_into(uint8_t *dst, size_t dst_capacity, const struct wsc_frame *frame);
 
 /**
  * Parse @p src. Incomplete frames stay in the decoder.
