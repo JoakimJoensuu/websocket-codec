@@ -38,6 +38,23 @@ enum : uint8_t {
 
 enum : unsigned { BYTE_BITS = 8 };
 
+struct decoder_ctx {
+#ifndef WSC_HOSTED
+  uint8_t storage[INTO_ARENA];
+#else
+  char unused;
+#endif
+};
+
+static struct wsc_decoder *decoder_open(struct decoder_ctx *ctx) {
+#ifdef WSC_HOSTED
+  (void)ctx;
+  return wsc_decoder_create();
+#else
+  return wsc_decoder_create_into(ctx->storage, sizeof(ctx->storage));
+#endif
+}
+
 static void wr16(uint8_t *dst, uint16_t value) {
   dst[0] = (uint8_t)((unsigned)value >> BYTE_BITS);
   dst[1] = (uint8_t)value;
@@ -131,17 +148,26 @@ static struct wsc_frame make_frame(bool fin, uint8_t opcode, const uint8_t *payl
 }
 
 static uint8_t *encode_buf(const struct wsc_frame *frame, size_t *wire_length) {
+#ifdef WSC_HOSTED
   struct wsc_encoding_result encoded = wsc_encode(frame);
   assert_that(encoded.err, is_equal_to(WSC_OK));
   assert_that(encoded.data, is_non_null);
   *wire_length = encoded.data_len;
   return encoded.data;
+#else
+  size_t need = wsc_encoded_len(frame);
+  uint8_t *buf = (uint8_t *)malloc(need);
+  assert_that(buf, is_non_null);
+  *wire_length = wsc_encode_into(buf, need, frame);
+  return buf;
+#endif
 }
 
 static void roundtrip(const struct wsc_frame *want) {
   size_t wire_length = 0;
   uint8_t *buf = encode_buf(want, &wire_length);
-  struct wsc_decoder *dec = wsc_decoder_create();
+  struct decoder_ctx ctx;
+  struct wsc_decoder *dec = decoder_open(&ctx);
   struct wsc_decoding_result result;
   assert_that(dec, is_non_null);
   result = wsc_decoder_feed(dec, buf, wire_length);
@@ -155,7 +181,8 @@ static void roundtrip(const struct wsc_frame *want) {
 static void roundtrip_split(const struct wsc_frame *want, size_t first) {
   size_t wire_length = 0;
   uint8_t *buf = encode_buf(want, &wire_length);
-  struct wsc_decoder *dec = wsc_decoder_create();
+  struct decoder_ctx ctx;
+  struct wsc_decoder *dec = decoder_open(&ctx);
   struct wsc_decoding_result result;
   assert_that(dec, is_non_null);
   assert_that(first < wire_length, is_true);
@@ -174,7 +201,8 @@ Ensure(rfc_unmasked_hello) {
   const uint8_t wire[] = {0x81, 0x05, 0x48, 0x65, 0x6c, 0x6c, 0x6f};
   const uint8_t hello[] = {'H', 'e', 'l', 'l', 'o'};
   struct wsc_frame want = make_frame(true, WSC_OP_TEXT, hello, sizeof(hello), nullptr);
-  struct wsc_decoder *dec = wsc_decoder_create();
+  struct decoder_ctx ctx;
+  struct wsc_decoder *dec = decoder_open(&ctx);
   struct wsc_decoding_result result;
   assert_that(dec, is_non_null);
   result = wsc_decoder_feed(dec, wire, sizeof(wire));
@@ -189,7 +217,8 @@ Ensure(rfc_masked_hello) {
   const uint8_t hello[] = {'H', 'e', 'l', 'l', 'o'};
   const uint8_t key[] = {0x37, 0xfa, 0x21, 0x3d};
   struct wsc_frame want = make_frame(true, WSC_OP_TEXT, hello, sizeof(hello), key);
-  struct wsc_decoder *dec = wsc_decoder_create();
+  struct decoder_ctx ctx;
+  struct wsc_decoder *dec = decoder_open(&ctx);
   struct wsc_decoding_result result;
   assert_that(dec, is_non_null);
   result = wsc_decoder_feed(dec, wire, sizeof(wire));
@@ -200,7 +229,11 @@ Ensure(rfc_masked_hello) {
 }
 
 Ensure(roundtrip_sizes) {
+#ifdef WSC_HOSTED
   const size_t sizes[] = {0, 1, LEN7_MAX, LEN7_MAX + 1, UINT16_MAX, (size_t)UINT16_MAX + 1};
+#else
+  const size_t sizes[] = {0, 1, LEN7_MAX, LEN7_MAX + 1};
+#endif
   const uint8_t key[] = {1, 2, 3, 4};
   for (size_t idx = 0; idx < sizeof(sizes) / sizeof(sizes[0]); idx++) {
     size_t length = sizes[idx];
@@ -260,7 +293,8 @@ Ensure(split_and_empty_feed) {
   struct wsc_frame want = make_frame(true, WSC_OP_TEXT, hello, sizeof(hello), key);
   size_t wire_length = 0;
   uint8_t *buf = encode_buf(&want, &wire_length);
-  struct wsc_decoder *dec = wsc_decoder_create();
+  struct decoder_ctx ctx;
+  struct wsc_decoder *dec = decoder_open(&ctx);
   struct wsc_decoding_result result;
   assert_that(dec, is_non_null);
 
@@ -290,7 +324,8 @@ Ensure(byte_at_a_time) {
   struct wsc_frame want = make_frame(true, WSC_OP_TEXT, hello, sizeof(hello), key);
   size_t wire_length = 0;
   uint8_t *buf = encode_buf(&want, &wire_length);
-  struct wsc_decoder *dec = wsc_decoder_create();
+  struct decoder_ctx ctx;
+  struct wsc_decoder *dec = decoder_open(&ctx);
   struct wsc_decoding_result result;
   assert_that(dec, is_non_null);
   for (size_t i = 0; i < wire_length; i++) {
@@ -331,7 +366,8 @@ Ensure(two_frames_one_feed) {
   uint8_t *first_buf = encode_buf(&first, &first_length);
   uint8_t *second_buf = encode_buf(&second, &second_length);
   uint8_t *both = (uint8_t *)malloc(first_length + second_length);
-  struct wsc_decoder *dec = wsc_decoder_create();
+  struct decoder_ctx ctx;
+  struct wsc_decoder *dec = decoder_open(&ctx);
   struct wsc_decoding_result result;
   assert_that(both, is_non_null);
   assert_that(dec, is_non_null);
@@ -353,7 +389,8 @@ Ensure(non_minimal_len16) {
   const uint8_t payload[] = {0x01};
   size_t wire_length =
       craft(buf, sizeof(buf), true, 0, WSC_OP_BIN, nullptr, LEN16, payload, sizeof(payload));
-  struct wsc_decoder *dec = wsc_decoder_create();
+  struct decoder_ctx ctx;
+  struct wsc_decoder *dec = decoder_open(&ctx);
   struct wsc_decoding_result result;
   assert_that(dec, is_non_null);
   result = wsc_decoder_feed(dec, buf, wire_length);
@@ -369,7 +406,8 @@ Ensure(non_minimal_len64) {
   const uint8_t payload[] = {0x11};
   size_t wire_length =
       craft(buf, sizeof(buf), true, 0, WSC_OP_BIN, nullptr, LEN64, payload, sizeof(payload));
-  struct wsc_decoder *dec = wsc_decoder_create();
+  struct decoder_ctx ctx;
+  struct wsc_decoder *dec = decoder_open(&ctx);
   struct wsc_decoding_result result;
   assert_that(dec, is_non_null);
   result = wsc_decoder_feed(dec, buf, wire_length);
@@ -379,7 +417,8 @@ Ensure(non_minimal_len64) {
 
 Ensure(len64_msb) {
   uint8_t buf[HDR_BASE + LEN64_EXT];
-  struct wsc_decoder *dec = wsc_decoder_create();
+  struct decoder_ctx ctx;
+  struct wsc_decoder *dec = decoder_open(&ctx);
   struct wsc_decoding_result result;
   memset(buf, 0, sizeof(buf));
   buf[0] = (uint8_t)(FIN_BIT | WSC_OP_BIN);
@@ -398,7 +437,8 @@ Ensure(masked_raw_header) {
   size_t wire_length = craft(buf, sizeof(buf), true, 0, WSC_OP_BIN, key, (unsigned)sizeof(payload),
                              payload, sizeof(payload));
   struct wsc_frame want = make_frame(true, WSC_OP_BIN, payload, sizeof(payload), key);
-  struct wsc_decoder *dec = wsc_decoder_create();
+  struct decoder_ctx ctx;
+  struct wsc_decoder *dec = decoder_open(&ctx);
   struct wsc_decoding_result result;
   assert_that(dec, is_non_null);
   result = wsc_decoder_feed(dec, buf, wire_length);
@@ -408,6 +448,7 @@ Ensure(masked_raw_header) {
   wsc_decoder_destroy(dec);
 }
 
+#ifdef WSC_HOSTED
 Ensure(encode_into_matches_encode) {
   const uint8_t payload[] = {0x10, 0x20, 0x30, 0x40, 0x50};
   const uint8_t key[] = {0x01, 0x02, 0x03, 0x04};
@@ -426,7 +467,9 @@ Ensure(encode_into_matches_encode) {
   free(into);
   free(encoded.data);
 }
+#endif
 
+#ifndef WSC_HOSTED
 Ensure(decoder_into_too_small) {
   uint8_t storage[INTO_TOO_SMALL];
   assert_that(wsc_decoder_create_into(storage, sizeof(storage)), is_null);
@@ -543,6 +586,7 @@ Ensure(decoder_into_no_memory) {
   wsc_decoder_destroy(dec);
   free(buf);
 }
+#endif
 
 int main() {
   auto suite = create_test_suite();
@@ -558,12 +602,16 @@ int main() {
   add_test(suite, non_minimal_len64);
   add_test(suite, len64_msb);
   add_test(suite, masked_raw_header);
+#ifdef WSC_HOSTED
   add_test(suite, encode_into_matches_encode);
+#endif
+#ifndef WSC_HOSTED
   add_test(suite, decoder_into_too_small);
   add_test(suite, decoder_into_roundtrip_and_split);
   add_test(suite, decoder_into_two_frames);
   add_test(suite, decoder_into_complete_then_split);
   add_test(suite, decoder_into_no_memory);
+#endif
   auto reporter = create_text_reporter();
   int result = run_test_suite(suite, reporter);
   destroy_test_suite(suite);

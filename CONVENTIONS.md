@@ -4,7 +4,10 @@ Do not restate language or protocol standards.
 
 ## Language
 
-ISO C23, hosted. No extensions.
+ISO C23. No extensions.
+
+With `WSC_HOSTED=ON` (default), the library is hosted. With `WSC_HOSTED=OFF`, it is
+freestanding and uses ringalloc for the decoder.
 
 Cast only when there is no implicit conversion, and only when that is the
 most readable way.
@@ -27,7 +30,8 @@ Tools and other files refer to it, or say nothing.
 
 ## Errors
 
-Programming errors abort, expected failures still return an error.
+Programming errors call unreachable() in freestanding builds and abort() when
+hosted. Expected failures still return an error.
 
 ## Names
 

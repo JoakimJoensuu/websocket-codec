@@ -81,8 +81,11 @@ jobs:
 
   build:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        hosted: [ON, OFF]
     steps:
       - uses: actions/checkout@v5
-      - run: cmake -B build
+      - run: cmake -B build -DWSC_HOSTED=${{ matrix.hosted }}
       - run: cmake --build build
       - run: ctest --test-dir build --output-on-failure

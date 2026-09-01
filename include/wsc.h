@@ -53,22 +53,24 @@ struct wsc_decoding_result {
 
 struct wsc_decoder;
 
+#ifdef WSC_HOSTED
 /** @return Heap decoder, or nullptr on OOM. */
 struct wsc_decoder *wsc_decoder_create();
 
+/** Heap encoding, or WSC_ERR_NO_MEMORY. Caller frees @c data. */
+struct wsc_encoding_result wsc_encode(const struct wsc_frame *frame);
+#else
 /**
  * Decoder and its allocations come from @p buf. nullptr if @p buf is too small.
  * wsc_decoder_destroy does not free @p buf.
  */
 struct wsc_decoder *wsc_decoder_create_into(void *buf, size_t cap);
+#endif
 
 /**
  * @param decoder May be nullptr.
  */
 void wsc_decoder_destroy(struct wsc_decoder *decoder);
-
-/** Heap encoding, or WSC_ERR_NO_MEMORY. Caller frees @c data. */
-struct wsc_encoding_result wsc_encode(const struct wsc_frame *frame);
 
 size_t wsc_encoded_len(const struct wsc_frame *frame);
 

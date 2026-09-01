@@ -27,21 +27,30 @@ if(PROJECT_IS_TOP_LEVEL AND (CMAKE_C_COMPILER_ID STREQUAL "Clang" OR CMAKE_C_COM
   target_link_options(wsc_sanitize INTERFACE -fsanitize=address,undefined)
 endif()
 
-include(FetchContent)
-FetchContent_Declare(
-  ringalloc
-  GIT_REPOSITORY https://github.com/JoakimJoensuu/ringalloc.git
-  GIT_TAG 49e985681fa8a4000d902f49bc00d7087b3be055)
-FetchContent_MakeAvailable(ringalloc)
+option(WSC_HOSTED "Heap-backed decoder and wsc_encode" ON)
 
-add_library(wsc src/wsc.c)
+if(WSC_HOSTED)
+  add_library(wsc src/wsc_core.c src/wsc_hosted.c)
+  target_compile_definitions(wsc PUBLIC WSC_HOSTED=1)
+else()
+  include(FetchContent)
+  FetchContent_Declare(
+    ringalloc
+    GIT_REPOSITORY https://github.com/JoakimJoensuu/ringalloc.git
+    GIT_TAG 49e985681fa8a4000d902f49bc00d7087b3be055)
+  FetchContent_MakeAvailable(ringalloc)
+  add_library(wsc src/wsc_core.c src/wsc_ring.c)
+  target_compile_options(wsc PRIVATE -ffreestanding)
+  target_link_libraries(wsc PUBLIC ringalloc)
+endif()
+
 target_include_directories(wsc PUBLIC include)
-target_link_libraries(wsc PRIVATE wsc_warnings wsc_sanitize ringalloc)
+target_link_libraries(wsc PRIVATE wsc_warnings wsc_sanitize)
 
 option(WSC_EXAMPLES "Build examples" ${PROJECT_IS_TOP_LEVEL})
 option(WSC_TESTS "Build tests" ${PROJECT_IS_TOP_LEVEL})
 
-if(WSC_EXAMPLES)
+if(WSC_EXAMPLES AND WSC_HOSTED)
   add_subdirectory(examples)
 endif()
 

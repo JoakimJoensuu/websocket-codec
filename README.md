@@ -13,6 +13,9 @@ cmake -B build && cmake --build build && ctest --test-dir build
 See [CMakeLists.txt](CMakeLists.txt) and [tests/CMakeLists.txt](tests/CMakeLists.txt) for
 options and dependencies.
 
+`WSC_HOSTED` (default ON) selects a heap-backed decoder and `wsc_encode`. When OFF, the
+library is freestanding: `wsc_decoder_create_into` and ringalloc only.
+
 ## Style
 
 Run the [build](#build) step first when `compile_commands.json` is missing or stale.
