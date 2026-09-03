@@ -6,8 +6,10 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-file(CREATE_LINK "${CMAKE_BINARY_DIR}/compile_commands.json"
-     "${CMAKE_SOURCE_DIR}/compile_commands.json" SYMBOLIC COPY_ON_ERROR)
+if(PROJECT_IS_TOP_LEVEL)
+  file(CREATE_LINK "${CMAKE_BINARY_DIR}/compile_commands.json"
+       "${CMAKE_SOURCE_DIR}/compile_commands.json" SYMBOLIC COPY_ON_ERROR)
+endif()
 
 add_library(wsc_warnings INTERFACE)
 target_compile_options(
