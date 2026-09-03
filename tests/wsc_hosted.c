@@ -94,7 +94,7 @@ Ensure(roundtrip_sizes) {
     uint8_t *payload = nullptr;
     struct wsc_frame frame;
     if (length > 0) {
-      payload = (uint8_t *)malloc(length);
+      payload = malloc(length);
       assert_that(payload, is_non_null);
       for (size_t i = 0; i < length; i++) {
         payload[i] = (uint8_t)(i * 3U);
@@ -130,7 +130,7 @@ Ensure(header_length_bytes) {
   assert_that(wire[1], is_equal_to(WSC_TEST_LENGTH16));
   free(wire);
 
-  wide = (uint8_t *)malloc((size_t)UINT16_MAX + 1);
+  wide = malloc((size_t)UINT16_MAX + 1);
   assert_that(wide, is_non_null);
   memset(wide, WSC_TEST_FILL_WIDE, (size_t)UINT16_MAX + 1);
   frame = wsc_test_make_frame(true, WSC_OPCODE_BINARY, wide, (size_t)UINT16_MAX + 1, nullptr);
@@ -218,7 +218,7 @@ Ensure(two_frames_one_feed) {
   size_t second_length = 0;
   uint8_t *first_wire = encode_wire(&first, &first_length);
   uint8_t *second_wire = encode_wire(&second, &second_length);
-  uint8_t *both = (uint8_t *)malloc(first_length + second_length);
+  uint8_t *both = malloc(first_length + second_length);
   struct wsc_decoder *decoder = wsc_decoder_create();
   struct wsc_decoding_result result;
   assert_that(both, is_non_null);

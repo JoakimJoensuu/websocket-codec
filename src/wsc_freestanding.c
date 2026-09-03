@@ -106,7 +106,7 @@ struct wsc_decoder *wsc_decoder_create(void *buffer, size_t capacity) {
   if (buffer == nullptr) {
     wsc_trap();
   }
-  uint8_t *raw = (uint8_t *)buffer;
+  uint8_t *raw = buffer;
   size_t align = alignof(struct wsc_decoder);
   size_t skip = ((uintptr_t)raw % align == 0) ? 0 : align - ((uintptr_t)raw % align);
   if (skip > capacity || sizeof(struct wsc_decoder) > capacity - skip) {
@@ -115,7 +115,7 @@ struct wsc_decoder *wsc_decoder_create(void *buffer, size_t capacity) {
   struct wsc_decoder *decoder = (struct wsc_decoder *)(raw + skip);
   memset(decoder, 0, sizeof(*decoder));
   size_t after = skip + sizeof(*decoder);
-  decoder->ringalloc = ra_initialize((unsigned char *)(raw + after), capacity - after);
+  decoder->ringalloc = ra_initialize(raw + after, capacity - after);
   if (decoder->ringalloc == nullptr) {
     return nullptr;
   }
