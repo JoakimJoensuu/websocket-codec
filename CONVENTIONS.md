@@ -86,8 +86,9 @@ implementation.
 
 ## Commits and PRs
 
-A title must complete "This commit/PR will …" with what the change
-does to the files, not what those files do or say afterwards. Do not
+A title must complete "This commit/PR will …" with the change itself: a
+behaviour change, a fix, or what it adds, removes, or updates. Do not
+restate what the code or docs say or how they work afterwards. Do not
 end it with a period.
 
 A body describes or reasons the change when that is needed. Otherwise
