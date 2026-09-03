@@ -314,12 +314,12 @@ Ensure(masked_raw_header) {
   wsc_decoder_destroy(decoder);
 }
 
-Ensure(decoder_into_too_small) {
+Ensure(caller_buffer_too_small) {
   uint8_t storage[WSC_TEST_ARENA_TOO_SMALL];
   assert_that(wsc_decoder_create(storage, sizeof(storage)), is_null);
 }
 
-Ensure(decoder_into_roundtrip_and_split) {
+Ensure(caller_buffer_roundtrip_and_split) {
   const uint8_t hello[] = {'h', 'i', '!'};
   const uint8_t key[] = {0x11, 0x22, 0x33, 0x44};
   struct wsc_frame want = wsc_test_make_frame(true, WSC_OPCODE_TEXT, hello, sizeof(hello), key);
@@ -347,7 +347,7 @@ Ensure(decoder_into_roundtrip_and_split) {
   free(wire);
 }
 
-Ensure(decoder_into_two_frames) {
+Ensure(caller_buffer_two_frames) {
   const uint8_t first_payload[] = {'a'};
   const uint8_t second_payload[] = {'b', 'b'};
   struct wsc_frame first =
@@ -377,7 +377,7 @@ Ensure(decoder_into_two_frames) {
   free(second_wire);
 }
 
-Ensure(decoder_into_complete_then_split) {
+Ensure(caller_buffer_complete_then_split) {
   const uint8_t first_payload[] = {'a'};
   const uint8_t second_payload[] = {'b', 'b', 'b'};
   struct wsc_frame first =
@@ -414,7 +414,7 @@ Ensure(decoder_into_complete_then_split) {
   free(second_wire);
 }
 
-Ensure(decoder_into_no_memory) {
+Ensure(caller_buffer_no_memory) {
   const uint8_t payload[WSC_TEST_LENGTH7_MAX] = {0};
   struct wsc_frame frame =
       wsc_test_make_frame(true, WSC_OPCODE_BINARY, payload, sizeof(payload), nullptr);
@@ -445,11 +445,11 @@ int main() {
   add_test(suite, non_minimal_length64);
   add_test(suite, len64_msb);
   add_test(suite, masked_raw_header);
-  add_test(suite, decoder_into_too_small);
-  add_test(suite, decoder_into_roundtrip_and_split);
-  add_test(suite, decoder_into_two_frames);
-  add_test(suite, decoder_into_complete_then_split);
-  add_test(suite, decoder_into_no_memory);
+  add_test(suite, caller_buffer_too_small);
+  add_test(suite, caller_buffer_roundtrip_and_split);
+  add_test(suite, caller_buffer_two_frames);
+  add_test(suite, caller_buffer_complete_then_split);
+  add_test(suite, caller_buffer_no_memory);
   auto reporter = create_text_reporter();
   int result = run_test_suite(suite, reporter);
   destroy_test_suite(suite);

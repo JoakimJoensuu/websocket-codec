@@ -37,7 +37,7 @@ static void apply_mask(uint8_t *data, size_t length, const uint8_t key[WSC_MASKI
   }
 }
 
-static size_t header_size(size_t payload_length, bool masked) {
+static size_t encoded_header_length(size_t payload_length, bool masked) {
   size_t header_length = WSC_HEADER_BASE;
   if (payload_length > UINT16_MAX) {
     header_length += WSC_LENGTH64_EXT;
@@ -81,7 +81,7 @@ static void require_frame(const struct wsc_frame *frame) {
 
 static size_t encoded_length(const struct wsc_frame *frame) {
   require_frame(frame);
-  size_t header_length = header_size(frame->payload_length, frame->masked);
+  size_t header_length = encoded_header_length(frame->payload_length, frame->masked);
   if (frame->payload_length > ((size_t)-1) - header_length) {
     wsc_trap();
   }
