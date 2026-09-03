@@ -13,7 +13,7 @@ int wsc_buffer_reserve(struct wsc_decoder *decoder, struct wsc_buffer *buffer,
   if (minimum_capacity <= buffer->capacity) {
     return 0;
   }
-  capacity = buffer->capacity ? buffer->capacity : WSC_BUF_INIT;
+  capacity = buffer->capacity ? buffer->capacity : WSC_BUFFER_INIT;
   while (capacity < minimum_capacity) {
     if (capacity > ((size_t)-1) / 2) {
       capacity = minimum_capacity;
@@ -62,11 +62,11 @@ enum wsc_err wsc_attach_payload(struct wsc_decoder *decoder, struct wsc_frame *f
   if (decoder->payload.data == nullptr) {
     wsc_trap();
   }
-  copy = (uint8_t *)malloc(frame->payload_len);
+  copy = (uint8_t *)malloc(frame->payload_length);
   if (copy == nullptr) {
     return WSC_ERR_NO_MEMORY;
   }
-  memcpy(copy, decoder->payload.data, frame->payload_len);
+  memcpy(copy, decoder->payload.data, frame->payload_length);
   frame->payload = copy;
   return WSC_OK;
 }
@@ -98,13 +98,13 @@ struct wsc_decoder *wsc_decoder_create() {
 
 struct wsc_encoding_result wsc_encode(const struct wsc_frame *frame) {
   struct wsc_encoding_result result = {.err = WSC_OK};
-  size_t total = wsc_encoded_len(frame);
+  size_t total = wsc_encoded_length(frame);
 
-  result.data_len = total;
+  result.data_length = total;
   result.data = (uint8_t *)malloc(total);
   if (result.data == nullptr) {
     result.err = WSC_ERR_NO_MEMORY;
-    result.data_len = 0;
+    result.data_length = 0;
     return result;
   }
   wsc_encode_buffer(result.data, total, frame);
