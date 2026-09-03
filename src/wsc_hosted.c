@@ -7,13 +7,11 @@
 
 int wsc_buffer_reserve(struct wsc_decoder *decoder, struct wsc_buffer *buffer,
                        size_t minimum_capacity) {
-  uint8_t *new_buffer = nullptr;
-  size_t capacity = 0;
   (void)decoder;
   if (minimum_capacity <= buffer->capacity) {
     return 0;
   }
-  capacity = buffer->capacity ? buffer->capacity : WSC_BUFFER_INIT;
+  size_t capacity = buffer->capacity ? buffer->capacity : WSC_BUFFER_INIT;
   while (capacity < minimum_capacity) {
     if (capacity > ((size_t)-1) / 2) {
       capacity = minimum_capacity;
@@ -21,7 +19,7 @@ int wsc_buffer_reserve(struct wsc_decoder *decoder, struct wsc_buffer *buffer,
     }
     capacity *= 2;
   }
-  new_buffer = (uint8_t *)realloc(buffer->data, capacity);
+  uint8_t *new_buffer = (uint8_t *)realloc(buffer->data, capacity);
   if (new_buffer == nullptr) {
     return -1;
   }
@@ -39,16 +37,14 @@ void wsc_clear_frames(struct wsc_decoder *decoder) {
 }
 
 int wsc_frames_reserve(struct wsc_decoder *decoder, size_t capacity) {
-  size_t bytes = 0;
-  struct wsc_frame *new_buffer = nullptr;
   if (capacity <= decoder->frames_capacity) {
     return -1;
   }
   if (capacity > ((size_t)-1) / sizeof(struct wsc_frame)) {
     return -1;
   }
-  bytes = capacity * sizeof(struct wsc_frame);
-  new_buffer = (struct wsc_frame *)realloc(decoder->frames, bytes);
+  size_t bytes = capacity * sizeof(struct wsc_frame);
+  struct wsc_frame *new_buffer = (struct wsc_frame *)realloc(decoder->frames, bytes);
   if (new_buffer == nullptr) {
     return -1;
   }
@@ -58,11 +54,10 @@ int wsc_frames_reserve(struct wsc_decoder *decoder, size_t capacity) {
 }
 
 enum wsc_err wsc_attach_payload(struct wsc_decoder *decoder, struct wsc_frame *frame) {
-  uint8_t *copy = nullptr;
   if (decoder->payload.data == nullptr) {
     wsc_trap();
   }
-  copy = (uint8_t *)malloc(frame->payload_length);
+  uint8_t *copy = (uint8_t *)malloc(frame->payload_length);
   if (copy == nullptr) {
     return WSC_ERR_NO_MEMORY;
   }

@@ -43,11 +43,10 @@ static void ring_free_oldest(struct wsc_decoder *decoder) {
 }
 
 static void *ring_alloc(struct wsc_decoder *decoder, size_t size) {
-  void *pointer = nullptr;
   if (decoder->allocation_count >= WSC_RING_TRACK_MAX) {
     return nullptr;
   }
-  pointer = ra_allocate(decoder->ringalloc, size);
+  void *pointer = ra_allocate(decoder->ringalloc, size);
   if (pointer == nullptr) {
     return nullptr;
   }
@@ -64,12 +63,12 @@ static void ring_reset(struct wsc_decoder *decoder) {
 
 int wsc_buffer_reserve(struct wsc_decoder *decoder, struct wsc_buffer *buffer,
                        size_t minimum_capacity) {
-  uint8_t *new_buffer = nullptr;
   if (minimum_capacity <= buffer->capacity) {
     return 0;
   }
   if (buffer->data != nullptr) {
-    new_buffer = (uint8_t *)ra_reallocate(decoder->ringalloc, buffer->data, minimum_capacity);
+    uint8_t *new_buffer =
+        (uint8_t *)ra_reallocate(decoder->ringalloc, buffer->data, minimum_capacity);
     if (new_buffer == nullptr) {
       return -1;
     }
@@ -84,7 +83,7 @@ int wsc_buffer_reserve(struct wsc_decoder *decoder, struct wsc_buffer *buffer,
     buffer->capacity = minimum_capacity;
     return 0;
   }
-  new_buffer = (uint8_t *)ring_alloc(decoder, minimum_capacity);
+  uint8_t *new_buffer = (uint8_t *)ring_alloc(decoder, minimum_capacity);
   if (new_buffer == nullptr) {
     return -1;
   }
@@ -113,17 +112,16 @@ void wsc_clear_frames(struct wsc_decoder *decoder) {
 }
 
 int wsc_frames_reserve(struct wsc_decoder *decoder, size_t capacity) {
-  size_t bytes = 0;
-  struct wsc_frame *new_buffer = nullptr;
   if (capacity <= decoder->frames_capacity) {
     return -1;
   }
   if (capacity > ((size_t)-1) / sizeof(struct wsc_frame)) {
     return -1;
   }
-  bytes = capacity * sizeof(struct wsc_frame);
+  size_t bytes = capacity * sizeof(struct wsc_frame);
   if (decoder->frames != nullptr) {
-    new_buffer = (struct wsc_frame *)ra_reallocate(decoder->ringalloc, decoder->frames, bytes);
+    struct wsc_frame *new_buffer =
+        (struct wsc_frame *)ra_reallocate(decoder->ringalloc, decoder->frames, bytes);
     if (new_buffer != nullptr) {
       if (new_buffer != decoder->frames) {
         void *const *slot = ring_track_find(decoder, decoder->frames);
@@ -137,7 +135,7 @@ int wsc_frames_reserve(struct wsc_decoder *decoder, size_t capacity) {
       return 0;
     }
   }
-  new_buffer = (struct wsc_frame *)ring_alloc(decoder, bytes);
+  struct wsc_frame *new_buffer = (struct wsc_frame *)ring_alloc(decoder, bytes);
   if (new_buffer == nullptr) {
     return -1;
   }
@@ -171,23 +169,18 @@ void wsc_decoder_free(struct wsc_decoder *decoder) {
 }
 
 struct wsc_decoder *wsc_decoder_create(void *buffer, size_t capacity) {
-  uint8_t *raw = nullptr;
-  size_t align = alignof(struct wsc_decoder);
-  size_t skip = 0;
-  size_t after = 0;
-  struct wsc_decoder *decoder = nullptr;
-
   if (buffer == nullptr) {
     wsc_trap();
   }
-  raw = (uint8_t *)buffer;
-  skip = ((uintptr_t)raw % align == 0) ? 0 : align - ((uintptr_t)raw % align);
+  uint8_t *raw = (uint8_t *)buffer;
+  size_t align = alignof(struct wsc_decoder);
+  size_t skip = ((uintptr_t)raw % align == 0) ? 0 : align - ((uintptr_t)raw % align);
   if (skip > capacity || sizeof(struct wsc_decoder) > capacity - skip) {
     return nullptr;
   }
-  decoder = (struct wsc_decoder *)(raw + skip);
+  struct wsc_decoder *decoder = (struct wsc_decoder *)(raw + skip);
   memset(decoder, 0, sizeof(*decoder));
-  after = skip + sizeof(*decoder);
+  size_t after = skip + sizeof(*decoder);
   decoder->ringalloc = ra_initialize((unsigned char *)(raw + after), capacity - after);
   if (decoder->ringalloc == nullptr) {
     return nullptr;

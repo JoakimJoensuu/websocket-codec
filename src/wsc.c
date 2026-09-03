@@ -80,9 +80,8 @@ static void require_frame(const struct wsc_frame *frame) {
 }
 
 static size_t encoded_length(const struct wsc_frame *frame) {
-  size_t header_length = 0;
   require_frame(frame);
-  header_length = header_size(frame->payload_length, frame->masked);
+  size_t header_length = header_size(frame->payload_length, frame->masked);
   if (frame->payload_length > ((size_t)-1) - header_length) {
     wsc_trap();
   }
@@ -149,11 +148,11 @@ size_t wsc_encode(uint8_t *destination, size_t destination_capacity,
 #endif
 
 static struct wsc_decoding_result make_result(struct wsc_decoder *decoder) {
-  struct wsc_decoding_result result;
-  result.err = decoder->last_err;
-  result.frames = decoder->frames_count ? decoder->frames : nullptr;
-  result.frames_count = decoder->frames_count;
-  return result;
+  return (struct wsc_decoding_result){
+      .err = decoder->last_err,
+      .frames = decoder->frames_count ? decoder->frames : nullptr,
+      .frames_count = decoder->frames_count,
+  };
 }
 
 static enum wsc_err fail(struct wsc_decoder *decoder, enum wsc_err err) {
@@ -175,21 +174,20 @@ static int frames_push(struct wsc_decoder *decoder, struct wsc_frame frame) {
 }
 
 static enum wsc_err emit(struct wsc_decoder *decoder) {
-  struct wsc_frame frame;
-  enum wsc_err err = WSC_OK;
-
-  frame.payload = nullptr;
-  frame.payload_length = (size_t)decoder->payload_length;
+  struct wsc_frame frame = {
+      .payload = nullptr,
+      .payload_length = (size_t)decoder->payload_length,
+      .opcode = decoder->opcode,
+      .fin = decoder->fin,
+      .rsv1 = decoder->rsv1,
+      .rsv2 = decoder->rsv2,
+      .rsv3 = decoder->rsv3,
+      .masked = decoder->masked,
+  };
   memcpy(frame.masking_key, decoder->masking_key, WSC_MASKING_KEY_LENGTH);
-  frame.opcode = decoder->opcode;
-  frame.fin = decoder->fin;
-  frame.rsv1 = decoder->rsv1;
-  frame.rsv2 = decoder->rsv2;
-  frame.rsv3 = decoder->rsv3;
-  frame.masked = decoder->masked;
 
   if (frame.payload_length > 0) {
-    err = wsc_attach_payload(decoder, &frame);
+    enum wsc_err err = wsc_attach_payload(decoder, &frame);
     if (err != WSC_OK) {
       return fail(decoder, err);
     }
@@ -214,9 +212,9 @@ static void reset_header(struct wsc_decoder *decoder) {
 static enum wsc_err on_header(struct wsc_decoder *decoder) {
   unsigned byte0 = decoder->header[0];
   unsigned byte1 = decoder->header[1];
-  uint64_t payload_length = 0;
   unsigned length7 = byte1 & WSC_LENGTH7_MASK;
   size_t offset = WSC_HEADER_BASE;
+  uint64_t payload_length = 0;
 
   decoder->fin = (byte0 & WSC_FIN_BIT) != 0;
   decoder->rsv1 = (byte0 & WSC_RSV1_BIT) != 0;
@@ -286,12 +284,11 @@ static enum wsc_err on_payload_done(struct wsc_decoder *decoder) {
 
 static enum wsc_err feed_header(struct wsc_decoder *decoder, const uint8_t *source, size_t length,
                                 size_t *used) {
-  size_t take = 0;
   *used = 0;
   if (decoder->header_received < WSC_HEADER_BASE) {
     decoder->header_total = WSC_HEADER_BASE;
   }
-  take = decoder->header_total - decoder->header_received;
+  size_t take = decoder->header_total - decoder->header_received;
   if (take > length) {
     take = length;
   }
@@ -350,7 +347,6 @@ void wsc_decoder_destroy(struct wsc_decoder *decoder) {
 
 struct wsc_decoding_result wsc_decoder_feed(struct wsc_decoder *decoder, const uint8_t *source,
                                             size_t length) {
-  size_t offset = 0;
   if (decoder == nullptr) {
     wsc_trap();
   }
@@ -361,6 +357,7 @@ struct wsc_decoding_result wsc_decoder_feed(struct wsc_decoder *decoder, const u
   if (decoder->state == WSC_STATE_DEAD) {
     return make_result(decoder);
   }
+  size_t offset = 0;
   while (offset < length && decoder->state != WSC_STATE_DEAD) {
     size_t used = 0;
     enum wsc_err err = WSC_OK;
