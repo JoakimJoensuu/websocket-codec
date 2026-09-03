@@ -11,8 +11,7 @@ int wsc_buffer_reserve(struct wsc_decoder *decoder, struct wsc_buffer *buffer,
     return 0;
   }
   if (buffer->data != nullptr) {
-    uint8_t *new_buffer =
-        (uint8_t *)ra_reallocate(decoder->ringalloc, buffer->data, minimum_capacity);
+    uint8_t *new_buffer = ra_reallocate(decoder->ringalloc, buffer->data, minimum_capacity);
     if (new_buffer == nullptr) {
       return -1;
     }
@@ -20,7 +19,7 @@ int wsc_buffer_reserve(struct wsc_decoder *decoder, struct wsc_buffer *buffer,
     buffer->capacity = minimum_capacity;
     return 0;
   }
-  uint8_t *new_buffer = (uint8_t *)ra_allocate(decoder->ringalloc, minimum_capacity);
+  uint8_t *new_buffer = ra_allocate(decoder->ringalloc, minimum_capacity);
   if (new_buffer == nullptr) {
     return -1;
   }
@@ -35,7 +34,7 @@ void wsc_clear_frames(struct wsc_decoder *decoder) {
     size_t length = decoder->payload.length;
     uint8_t *old = decoder->payload.data;
     ra_reset(decoder->ringalloc);
-    uint8_t *fresh = (uint8_t *)ra_allocate(decoder->ringalloc, capacity);
+    uint8_t *fresh = ra_allocate(decoder->ringalloc, capacity);
     if (fresh == nullptr) {
       wsc_trap();
     }
@@ -63,15 +62,14 @@ int wsc_frames_reserve(struct wsc_decoder *decoder, size_t capacity) {
   }
   size_t bytes = capacity * sizeof(struct wsc_frame);
   if (decoder->frames != nullptr) {
-    struct wsc_frame *new_buffer =
-        (struct wsc_frame *)ra_reallocate(decoder->ringalloc, decoder->frames, bytes);
+    struct wsc_frame *new_buffer = ra_reallocate(decoder->ringalloc, decoder->frames, bytes);
     if (new_buffer != nullptr) {
       decoder->frames = new_buffer;
       decoder->frames_capacity = capacity;
       return 0;
     }
   }
-  struct wsc_frame *new_buffer = (struct wsc_frame *)ra_allocate(decoder->ringalloc, bytes);
+  struct wsc_frame *new_buffer = ra_allocate(decoder->ringalloc, bytes);
   if (new_buffer == nullptr) {
     return -1;
   }

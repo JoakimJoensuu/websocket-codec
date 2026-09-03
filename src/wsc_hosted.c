@@ -19,7 +19,7 @@ int wsc_buffer_reserve(struct wsc_decoder *decoder, struct wsc_buffer *buffer,
     }
     capacity *= 2;
   }
-  uint8_t *new_buffer = (uint8_t *)realloc(buffer->data, capacity);
+  uint8_t *new_buffer = realloc(buffer->data, capacity);
   if (new_buffer == nullptr) {
     return -1;
   }
@@ -44,7 +44,7 @@ int wsc_frames_reserve(struct wsc_decoder *decoder, size_t capacity) {
     return -1;
   }
   size_t bytes = capacity * sizeof(struct wsc_frame);
-  struct wsc_frame *new_buffer = (struct wsc_frame *)realloc(decoder->frames, bytes);
+  struct wsc_frame *new_buffer = realloc(decoder->frames, bytes);
   if (new_buffer == nullptr) {
     return -1;
   }
@@ -57,7 +57,7 @@ enum wsc_err wsc_attach_payload(struct wsc_decoder *decoder, struct wsc_frame *f
   if (decoder->payload.data == nullptr) {
     wsc_trap();
   }
-  uint8_t *copy = (uint8_t *)malloc(frame->payload_length);
+  uint8_t *copy = malloc(frame->payload_length);
   if (copy == nullptr) {
     return WSC_ERR_NO_MEMORY;
   }
@@ -83,7 +83,7 @@ void wsc_decoder_free(struct wsc_decoder *decoder) {
 }
 
 struct wsc_decoder *wsc_decoder_create() {
-  struct wsc_decoder *decoder = (struct wsc_decoder *)calloc(1, sizeof(*decoder));
+  struct wsc_decoder *decoder = calloc(1, sizeof(*decoder));
   if (decoder == nullptr) {
     return nullptr;
   }
@@ -96,7 +96,7 @@ struct wsc_encoding_result wsc_encode(const struct wsc_frame *frame) {
   size_t total = wsc_encoded_length(frame);
 
   result.data_length = total;
-  result.data = (uint8_t *)malloc(total);
+  result.data = malloc(total);
   if (result.data == nullptr) {
     result.err = WSC_ERR_NO_MEMORY;
     result.data_length = 0;
