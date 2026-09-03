@@ -10,7 +10,7 @@ enum : unsigned {
   WSC_TEST_LENGTH64        = 127,
   WSC_TEST_ARENA_TOO_SMALL = 8,
   WSC_TEST_ARENA_SIZE      = 8192,
-  WSC_TEST_ARENA_TIGHT     = 1024,
+  WSC_TEST_ARENA_TIGHT     = 512,
 };
 
 enum : uint8_t {

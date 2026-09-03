@@ -45,6 +45,7 @@ else()
 endif()
 
 target_include_directories(wsc PUBLIC include)
+target_compile_features(wsc PUBLIC c_std_23)
 target_link_libraries(wsc PRIVATE wsc_warnings wsc_sanitize)
 
 option(WSC_EXAMPLES "Build examples" ${PROJECT_IS_TOP_LEVEL})

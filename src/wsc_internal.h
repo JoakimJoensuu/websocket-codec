@@ -46,10 +46,6 @@ enum : unsigned { WSC_BYTE_BITS = CHAR_BIT };
 
 enum wsc_parse_state { WSC_STATE_HEADER = 0, WSC_STATE_PAYLOAD, WSC_STATE_DEAD };
 
-#ifndef WSC_HOSTED
-enum : size_t { WSC_RING_TRACK_MAX = 64 };
-#endif
-
 struct wsc_buffer {
   uint8_t *data;
   size_t length;
@@ -62,8 +58,6 @@ struct wsc_decoder {
   struct wsc_buffer payload;
 #ifndef WSC_HOSTED
   struct ringalloc *ringalloc;
-  void *ring_track[WSC_RING_TRACK_MAX];
-  size_t allocation_count;
 #endif
   struct wsc_frame *frames;
   size_t frames_count;
