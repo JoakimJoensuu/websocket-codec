@@ -423,10 +423,8 @@ Ensure(decoder_into_no_memory) {
   uint8_t storage[WSC_TEST_ARENA_TIGHT];
   struct wsc_decoder *decoder = wsc_decoder_create(storage, sizeof(storage));
   struct wsc_decoding_result result;
-  if (decoder == nullptr) {
-    free(wire);
-    return;
-  }
+  assert_that(wire, is_non_null);
+  assert_that(decoder, is_non_null);
   result = wsc_decoder_feed(decoder, wire, wire_length);
   assert_that(result.err, is_equal_to(WSC_ERR_NO_MEMORY));
   wsc_decoder_destroy(decoder);

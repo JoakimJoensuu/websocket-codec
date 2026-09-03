@@ -5,24 +5,56 @@
 #include <stdint.h>
 #include <string.h>
 
-static void *ring_alloc(struct wsc_decoder *decoder, size_t size) {
-  void *ptr = ra_allocate(decoder->ringalloc, size);
-  if (ptr != nullptr) {
-    decoder->allocation_count++;
+static int ring_track_push(struct wsc_decoder *decoder, void *pointer) {
+  if (decoder->allocation_count >= WSC_RING_TRACK_MAX) {
+    return -1;
   }
-  return ptr;
+  decoder->ring_track[decoder->allocation_count] = pointer;
+  decoder->allocation_count++;
+  return 0;
 }
 
-static void ring_free(struct wsc_decoder *decoder) {
-  void *oldest = decoder->payload.data;
-  if (oldest == nullptr) {
-    oldest = decoder->frames;
-  }
-  if (oldest == nullptr) {
+static void ring_track_replace(struct wsc_decoder *decoder, void *const *slot, void *new_pointer) {
+  if (slot < decoder->ring_track || slot >= decoder->ring_track + decoder->allocation_count) {
     wsc_trap();
   }
-  ra_free(decoder->ringalloc, oldest);
+  *(void **)slot = new_pointer;
+}
+
+static void *const *ring_track_find(struct wsc_decoder *decoder, void *pointer) {
+  for (size_t index = 0; index < decoder->allocation_count; index++) {
+    if (decoder->ring_track[index] == pointer) {
+      return &decoder->ring_track[index];
+    }
+  }
+  return nullptr;
+}
+
+static void ring_free_oldest(struct wsc_decoder *decoder) {
+  if (decoder->allocation_count == 0) {
+    wsc_trap();
+  }
+  ra_free(decoder->ringalloc, decoder->ring_track[0]);
   decoder->allocation_count--;
+  if (decoder->allocation_count > 0) {
+    memmove((void *)decoder->ring_track, (const void *)(decoder->ring_track + 1),
+            decoder->allocation_count * sizeof(decoder->ring_track[0]));
+  }
+}
+
+static void *ring_alloc(struct wsc_decoder *decoder, size_t size) {
+  void *pointer = nullptr;
+  if (decoder->allocation_count >= WSC_RING_TRACK_MAX) {
+    return nullptr;
+  }
+  pointer = ra_allocate(decoder->ringalloc, size);
+  if (pointer == nullptr) {
+    return nullptr;
+  }
+  if (ring_track_push(decoder, pointer) != 0) {
+    wsc_trap();
+  }
+  return pointer;
 }
 
 static void ring_reset(struct wsc_decoder *decoder) {
@@ -38,18 +70,23 @@ int wsc_buffer_reserve(struct wsc_decoder *decoder, struct wsc_buffer *buffer,
   }
   if (buffer->data != nullptr) {
     new_buffer = (uint8_t *)ra_reallocate(decoder->ringalloc, buffer->data, minimum_capacity);
-    if (new_buffer != nullptr) {
-      buffer->capacity = minimum_capacity;
-      return 0;
+    if (new_buffer == nullptr) {
+      return -1;
     }
-    return -1;
+    if (new_buffer != buffer->data) {
+      void *const *slot = ring_track_find(decoder, buffer->data);
+      if (slot == nullptr) {
+        wsc_trap();
+      }
+      ring_track_replace(decoder, slot, new_buffer);
+      buffer->data = new_buffer;
+    }
+    buffer->capacity = minimum_capacity;
+    return 0;
   }
   new_buffer = (uint8_t *)ring_alloc(decoder, minimum_capacity);
   if (new_buffer == nullptr) {
     return -1;
-  }
-  if (buffer->data != nullptr && buffer->length > 0) {
-    memcpy(new_buffer, buffer->data, buffer->length);
   }
   buffer->data = new_buffer;
   buffer->capacity = minimum_capacity;
@@ -59,7 +96,10 @@ int wsc_buffer_reserve(struct wsc_decoder *decoder, struct wsc_buffer *buffer,
 void wsc_clear_frames(struct wsc_decoder *decoder) {
   if (decoder->state == WSC_STATE_PAYLOAD && decoder->payload.data != nullptr) {
     while (decoder->allocation_count > 1) {
-      ring_free(decoder);
+      if (decoder->ring_track[0] == decoder->payload.data) {
+        wsc_trap();
+      }
+      ring_free_oldest(decoder);
     }
   } else {
     ring_reset(decoder);
@@ -85,6 +125,14 @@ int wsc_frames_reserve(struct wsc_decoder *decoder, size_t capacity) {
   if (decoder->frames != nullptr) {
     new_buffer = (struct wsc_frame *)ra_reallocate(decoder->ringalloc, decoder->frames, bytes);
     if (new_buffer != nullptr) {
+      if (new_buffer != decoder->frames) {
+        void *const *slot = ring_track_find(decoder, decoder->frames);
+        if (slot == nullptr) {
+          wsc_trap();
+        }
+        ring_track_replace(decoder, slot, new_buffer);
+        decoder->frames = new_buffer;
+      }
       decoder->frames_capacity = capacity;
       return 0;
     }
