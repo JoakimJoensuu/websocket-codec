@@ -65,7 +65,9 @@ Do not use a boolean parameter to choose between two operations. Use two
 functions. A flag on one operation is fine.
 
 A function takes only what it uses. Prefer a field over the enclosing
-struct when the rest of the object is unused.
+struct when the rest of the object is unused. Keep the enclosing object
+when the alternative is adjacent convertible parameters or a throwaway
+struct of those fields.
 
 Pure functions that return a boolean are named as predicates. Other pure
 functions are named as nouns.
