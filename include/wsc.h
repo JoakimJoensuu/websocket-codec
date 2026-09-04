@@ -69,9 +69,10 @@ void wsc_decoder_destroy(struct wsc_decoder *decoder);
 #elifndef WSC_HOSTED
 
 /**
- * Decoder state is stored at the start of @p arena; ring allocations use the rest.
+ * Decoder state is stored at the first suitably aligned address in @p arena;
+ * ring allocations use what remains after that. The handle may differ from
+ * @p arena when alignment padding is needed. Does not take ownership of @p arena.
  * @return Opaque handle into @p arena, or nullptr if @p arena is too small.
- * Does not take ownership of @p arena.
  */
 struct wsc_decoder *wsc_decoder_create(unsigned char *arena, size_t capacity);
 
@@ -94,6 +95,8 @@ size_t wsc_encode(uint8_t *destination, size_t destination_capacity, const struc
  *
  * Completed frames are copied and unmasked (masking is wire format, RFC 6455 §5.3).
  * They are valid until the next wsc_decoder_feed.
+ * A non-WSC_OK result leaves the decoder unusable; later feeds return the same
+ * error until a new decoder is created.
  */
 struct wsc_decoding_result wsc_decoder_feed(struct wsc_decoder *decoder, const uint8_t *source,
                                             size_t length);

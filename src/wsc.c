@@ -80,7 +80,7 @@ static void require_frame(const struct wsc_frame *frame) {
   if (frame->opcode > WSC_OPCODE_MASK) {
     wsc_trap();
   }
-  if ((uint64_t)frame->payload_length & WSC_LENGTH64_MSB) {
+  if (frame->payload_length > (size_t)(WSC_LENGTH64_MSB - 1)) {
     wsc_trap();
   }
 }
