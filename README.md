@@ -12,7 +12,7 @@ Hosted:
 cmake -B build && cmake --build build && ctest --test-dir build
 ```
 
-Freestanding:
+Freestanding (`-DWSC_HOSTED=OFF` required on every configure):
 
 ```sh
 cmake -B build -DWSC_HOSTED=OFF && cmake --build build && ctest --test-dir build

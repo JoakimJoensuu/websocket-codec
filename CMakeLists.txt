@@ -31,6 +31,10 @@ if(PROJECT_IS_TOP_LEVEL AND (CMAKE_C_COMPILER_ID STREQUAL "Clang" OR CMAKE_C_COM
 endif()
 
 option(WSC_HOSTED "Heap-backed decoder and wsc_encode" ON)
+if(NOT WSC_HOSTED)
+  unset(WSC_HOSTED CACHE)
+  set(WSC_HOSTED OFF)
+endif()
 
 if(WSC_HOSTED)
   add_library(wsc src/wsc.c src/wsc_hosted.c)
