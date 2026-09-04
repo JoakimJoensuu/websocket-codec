@@ -1,3 +1,4 @@
+#include "wsc_hosted.h"
 #include "wsc.h"
 #include "wsc_internal.h"
 
@@ -5,7 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-int wsc_buffer_reserve(struct wsc_decoder *decoder, struct wsc_buffer *buffer,
+int wsc_buffer_reserve(struct wsc_decoder_data *decoder, struct wsc_buffer *buffer,
                        size_t minimum_capacity) {
   (void)decoder;
   if (minimum_capacity <= buffer->capacity) {
@@ -28,7 +29,7 @@ int wsc_buffer_reserve(struct wsc_decoder *decoder, struct wsc_buffer *buffer,
   return 0;
 }
 
-void wsc_clear_frames(struct wsc_decoder *decoder) {
+void wsc_clear_frames(struct wsc_decoder_data *decoder) {
   for (size_t i = 0; i < decoder->frames_count; i++) {
     free((void *)decoder->frames[i].payload);
     decoder->frames[i].payload = nullptr;
@@ -36,7 +37,7 @@ void wsc_clear_frames(struct wsc_decoder *decoder) {
   decoder->frames_count = 0;
 }
 
-int wsc_frames_reserve(struct wsc_decoder *decoder, size_t capacity) {
+int wsc_frames_reserve(struct wsc_decoder_data *decoder, size_t capacity) {
   if (capacity <= decoder->frames_capacity) {
     return -1;
   }
@@ -53,7 +54,7 @@ int wsc_frames_reserve(struct wsc_decoder *decoder, size_t capacity) {
   return 0;
 }
 
-enum wsc_err wsc_attach_payload(struct wsc_decoder *decoder, struct wsc_frame *frame) {
+enum wsc_err wsc_attach_payload(struct wsc_decoder_data *decoder, struct wsc_frame *frame) {
   if (decoder->payload.data == nullptr) {
     wsc_trap();
   }
@@ -71,24 +72,44 @@ void wsc_discard_payload(struct wsc_frame *frame) {
   frame->payload = nullptr;
 }
 
-void wsc_payload_emitted(struct wsc_decoder *decoder) {
+void wsc_payload_emitted(struct wsc_decoder_data *decoder) {
   (void)decoder;
 }
 
-void wsc_decoder_free(struct wsc_decoder *decoder) {
+void wsc_decoder_free(struct wsc_decoder_data *decoder) {
   wsc_clear_frames(decoder);
   free(decoder->frames);
   free(decoder->payload.data);
-  free(decoder);
+  decoder->frames = nullptr;
+  decoder->payload.data = nullptr;
+  decoder->payload.length = 0;
+  decoder->payload.capacity = 0;
 }
 
 struct wsc_decoder *wsc_decoder_create() {
-  struct wsc_decoder *decoder = calloc(1, sizeof(*decoder));
-  if (decoder == nullptr) {
+  struct wsc_decoder_data *data = calloc(1, sizeof(*data));
+  if (data == nullptr) {
     return nullptr;
   }
-  wsc_decoder_state_init(decoder);
-  return decoder;
+  wsc_decoder_state_init(data);
+  return (struct wsc_decoder *)data;
+}
+
+void wsc_decoder_destroy(struct wsc_decoder *decoder) {
+  if (decoder == nullptr) {
+    return;
+  }
+  struct wsc_decoder_data *data = (struct wsc_decoder_data *)decoder;
+  wsc_decoder_free(data);
+  free(data);
+}
+
+struct wsc_decoding_result wsc_decoder_feed(struct wsc_decoder *decoder, const uint8_t *source,
+                                            size_t length) {
+  if (decoder == nullptr) {
+    wsc_trap();
+  }
+  return wsc_decoder_feed_data((struct wsc_decoder_data *)decoder, source, length);
 }
 
 struct wsc_encoding_result wsc_encode(const struct wsc_frame *frame) {

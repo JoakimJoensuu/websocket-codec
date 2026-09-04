@@ -1,8 +1,7 @@
-#include <wsc.h>
-
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <wsc.h>
 
 int main() {
   const uint8_t hello[] = "hello";

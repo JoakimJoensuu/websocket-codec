@@ -1,5 +1,3 @@
-#include <wsc.h>
-
 #include <cgreen/assertions.h>
 #include <cgreen/constraint_syntax_helpers.h>
 #include <cgreen/reporter.h>
@@ -12,6 +10,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include <wsc.h>
 
 #include "wsc_test.h"
 

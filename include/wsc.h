@@ -54,17 +54,26 @@ struct wsc_decoding_result {
 struct wsc_decoder;
 
 #ifdef WSC_HOSTED
+
 /** @return Heap decoder, or nullptr on OOM. */
 struct wsc_decoder *wsc_decoder_create();
 
 /** Heap encoding, or WSC_ERR_NO_MEMORY. Caller frees @c encoding_result.data. */
 struct wsc_encoding_result wsc_encode(const struct wsc_frame *frame);
-#else
+
 /**
- * Decoder and its allocations come from @p buffer. nullptr if @p buffer is too small.
- * wsc_decoder_destroy does not free @p buffer.
+ * @param decoder May be nullptr. Invalidates frames from prior feeds.
  */
-struct wsc_decoder *wsc_decoder_create(void *buffer, size_t capacity);
+void wsc_decoder_destroy(struct wsc_decoder *decoder);
+
+#elifndef WSC_HOSTED
+
+/**
+ * Decoder state is stored at the start of @p arena; ring allocations use the rest.
+ * @return Opaque handle into @p arena, or nullptr if @p arena is too small.
+ * Does not take ownership of @p arena.
+ */
+struct wsc_decoder *wsc_decoder_create(unsigned char *arena, size_t capacity);
 
 /** Wire size of one encoded frame. */
 size_t wsc_encoded_length(const struct wsc_frame *frame);
@@ -77,20 +86,16 @@ size_t wsc_encoded_length(const struct wsc_frame *frame);
  * @c frame->masking_key; otherwise it is not masked.
  */
 size_t wsc_encode(uint8_t *destination, size_t destination_capacity, const struct wsc_frame *frame);
+
 #endif
 
 /**
  * Parse @p source. Incomplete frames stay in the decoder.
  *
  * Completed frames are copied and unmasked (masking is wire format, RFC 6455 §5.3).
- * They are valid until the next wsc_decoder_feed or wsc_decoder_destroy.
+ * They are valid until the next wsc_decoder_feed.
  */
 struct wsc_decoding_result wsc_decoder_feed(struct wsc_decoder *decoder, const uint8_t *source,
                                             size_t length);
-
-/**
- * @param decoder May be nullptr.
- */
-void wsc_decoder_destroy(struct wsc_decoder *decoder);
 
 #endif /* WSC_H */

@@ -1,11 +1,12 @@
-#include "ringalloc.h"
+#include "wsc_freestanding.h"
 #include "wsc.h"
 #include "wsc_internal.h"
 
+#include <ringalloc.h>
 #include <stdint.h>
 #include <string.h>
 
-int wsc_buffer_reserve(struct wsc_decoder *decoder, struct wsc_buffer *buffer,
+int wsc_buffer_reserve(struct wsc_decoder_data *decoder, struct wsc_buffer *buffer,
                        size_t minimum_capacity) {
   if (minimum_capacity <= buffer->capacity) {
     return 0;
@@ -28,7 +29,7 @@ int wsc_buffer_reserve(struct wsc_decoder *decoder, struct wsc_buffer *buffer,
   return 0;
 }
 
-void wsc_clear_frames(struct wsc_decoder *decoder) {
+void wsc_clear_frames(struct wsc_decoder_data *decoder) {
   if (decoder->state == WSC_STATE_PAYLOAD && decoder->payload.data != nullptr) {
     size_t capacity = decoder->payload.capacity;
     size_t length = decoder->payload.length;
@@ -53,7 +54,7 @@ void wsc_clear_frames(struct wsc_decoder *decoder) {
   decoder->frames_capacity = 0;
 }
 
-int wsc_frames_reserve(struct wsc_decoder *decoder, size_t capacity) {
+int wsc_frames_reserve(struct wsc_decoder_data *decoder, size_t capacity) {
   if (capacity <= decoder->frames_capacity) {
     return -1;
   }
@@ -81,7 +82,7 @@ int wsc_frames_reserve(struct wsc_decoder *decoder, size_t capacity) {
   return 0;
 }
 
-enum wsc_err wsc_attach_payload(struct wsc_decoder *decoder, struct wsc_frame *frame) {
+enum wsc_err wsc_attach_payload(struct wsc_decoder_data *decoder, struct wsc_frame *frame) {
   if (decoder->payload.data == nullptr) {
     wsc_trap();
   }
@@ -93,32 +94,45 @@ void wsc_discard_payload(struct wsc_frame *frame) {
   (void)frame;
 }
 
-void wsc_payload_emitted(struct wsc_decoder *decoder) {
+void wsc_payload_emitted(struct wsc_decoder_data *decoder) {
   decoder->payload.data = nullptr;
   decoder->payload.capacity = 0;
 }
 
-void wsc_decoder_free(struct wsc_decoder *decoder) {
-  (void)decoder;
-}
-
-struct wsc_decoder *wsc_decoder_create(void *buffer, size_t capacity) {
-  if (buffer == nullptr) {
+struct wsc_decoder *wsc_decoder_create(unsigned char *arena, size_t capacity) {
+  if (arena == nullptr) {
     wsc_trap();
   }
-  uint8_t *raw = buffer;
-  size_t align = alignof(struct wsc_decoder);
-  size_t skip = ((uintptr_t)raw % align == 0) ? 0 : align - ((uintptr_t)raw % align);
-  if (skip > capacity || sizeof(struct wsc_decoder) > capacity - skip) {
+  size_t align = alignof(struct wsc_decoder_data);
+  size_t skip = ((uintptr_t)arena % align == 0) ? 0 : align - ((uintptr_t)arena % align);
+  if (skip > capacity || sizeof(struct wsc_decoder_data) > capacity - skip) {
     return nullptr;
   }
-  struct wsc_decoder *decoder = (struct wsc_decoder *)(raw + skip);
-  memset(decoder, 0, sizeof(*decoder));
-  size_t after = skip + sizeof(*decoder);
-  decoder->ringalloc = ra_initialize(raw + after, capacity - after);
-  if (decoder->ringalloc == nullptr) {
+  unsigned char *slot = arena + skip;
+  size_t after = skip + sizeof(struct wsc_decoder_data);
+  struct wsc_decoder_data data = {};
+  data.ringalloc = ra_initialize(arena + after, capacity - after);
+  if (data.ringalloc == nullptr) {
     return nullptr;
   }
-  wsc_decoder_state_init(decoder);
-  return decoder;
+  wsc_decoder_state_init(&data);
+  memcpy(slot, &data, sizeof(data));
+  return (struct wsc_decoder *)slot;
+}
+
+struct wsc_decoding_result wsc_decoder_feed(struct wsc_decoder *decoder, const uint8_t *source,
+                                            size_t length) {
+  if (decoder == nullptr) {
+    wsc_trap();
+  }
+  struct wsc_decoder_data data;
+  memcpy(&data, decoder, sizeof(data));
+  struct wsc_decoding_result result = wsc_decoder_feed_data(&data, source, length);
+  memcpy(decoder, &data, sizeof(data));
+  return result;
+}
+
+size_t wsc_encode(uint8_t *destination, size_t destination_capacity,
+                  const struct wsc_frame *frame) {
+  return wsc_encode_buffer(destination, destination_capacity, frame);
 }

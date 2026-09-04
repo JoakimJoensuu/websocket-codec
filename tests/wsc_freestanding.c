@@ -1,5 +1,3 @@
-#include <wsc.h>
-
 #include <cgreen/assertions.h>
 #include <cgreen/constraint_syntax_helpers.h>
 #include <cgreen/reporter.h>
@@ -12,6 +10,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include <wsc.h>
 
 #include "wsc_test.h"
 
@@ -42,7 +41,6 @@ static void roundtrip(const struct wsc_frame *want) {
   assert_that(result.err, is_equal_to(WSC_OK));
   assert_that(result.frames_count, is_equal_to(1));
   wsc_test_assert_frame(&result.frames[0], want);
-  wsc_decoder_destroy(decoder);
   free(wire);
 }
 
@@ -61,7 +59,6 @@ static void roundtrip_split(const struct wsc_frame *want, size_t first) {
   assert_that(result.err, is_equal_to(WSC_OK));
   assert_that(result.frames_count, is_equal_to(1));
   wsc_test_assert_frame(&result.frames[0], want);
-  wsc_decoder_destroy(decoder);
   free(wire);
 }
 
@@ -77,7 +74,6 @@ Ensure(rfc_unmasked_hello) {
   assert_that(result.err, is_equal_to(WSC_OK));
   assert_that(result.frames_count, is_equal_to(1));
   wsc_test_assert_frame(&result.frames[0], &want);
-  wsc_decoder_destroy(decoder);
 }
 
 Ensure(rfc_masked_hello) {
@@ -93,7 +89,6 @@ Ensure(rfc_masked_hello) {
   assert_that(result.err, is_equal_to(WSC_OK));
   assert_that(result.frames_count, is_equal_to(1));
   wsc_test_assert_frame(&result.frames[0], &want);
-  wsc_decoder_destroy(decoder);
 }
 
 Ensure(roundtrip_sizes) {
@@ -177,7 +172,6 @@ Ensure(split_and_empty_feed) {
   assert_that(result.frames_count, is_equal_to(1));
   wsc_test_assert_frame(&result.frames[0], &want);
 
-  wsc_decoder_destroy(decoder);
   free(wire);
 
   roundtrip_split(&want, 3);
@@ -203,7 +197,6 @@ Ensure(byte_at_a_time) {
       wsc_test_assert_frame(&result.frames[0], &want);
     }
   }
-  wsc_decoder_destroy(decoder);
   free(wire);
 }
 
@@ -243,7 +236,6 @@ Ensure(two_frames_one_feed) {
   assert_that(result.frames_count, is_equal_to(2));
   wsc_test_assert_frame(&result.frames[0], &first);
   wsc_test_assert_frame(&result.frames[1], &second);
-  wsc_decoder_destroy(decoder);
   free(both);
   free(first_wire);
   free(second_wire);
@@ -263,7 +255,6 @@ Ensure(non_minimal_length16) {
   assert_that(result.frames_count, is_equal_to(0));
   result = wsc_decoder_feed(decoder, wire, wire_length);
   assert_that(result.err, is_equal_to(WSC_ERR_LENGTH_NOT_MINIMAL));
-  wsc_decoder_destroy(decoder);
 }
 
 Ensure(non_minimal_length64) {
@@ -277,7 +268,6 @@ Ensure(non_minimal_length64) {
   assert_that(decoder, is_non_null);
   result = wsc_decoder_feed(decoder, wire, wire_length);
   assert_that(result.err, is_equal_to(WSC_ERR_LENGTH_NOT_MINIMAL));
-  wsc_decoder_destroy(decoder);
 }
 
 Ensure(len64_msb) {
@@ -292,7 +282,6 @@ Ensure(len64_msb) {
   assert_that(decoder, is_non_null);
   result = wsc_decoder_feed(decoder, wire, sizeof(wire));
   assert_that(result.err, is_equal_to(WSC_ERR_LENGTH64_MSB));
-  wsc_decoder_destroy(decoder);
 }
 
 Ensure(masked_raw_header) {
@@ -311,7 +300,6 @@ Ensure(masked_raw_header) {
   assert_that(result.err, is_equal_to(WSC_OK));
   assert_that(result.frames_count, is_equal_to(1));
   wsc_test_assert_frame(&result.frames[0], &want);
-  wsc_decoder_destroy(decoder);
 }
 
 Ensure(caller_buffer_too_small) {
@@ -343,7 +331,6 @@ Ensure(caller_buffer_roundtrip_and_split) {
   assert_that(result.frames_count, is_equal_to(1));
   wsc_test_assert_frame(&result.frames[0], &want);
 
-  wsc_decoder_destroy(decoder);
   free(wire);
 }
 
@@ -371,7 +358,6 @@ Ensure(caller_buffer_two_frames) {
   assert_that(result.frames_count, is_equal_to(2));
   wsc_test_assert_frame(&result.frames[0], &first);
   wsc_test_assert_frame(&result.frames[1], &second);
-  wsc_decoder_destroy(decoder);
   free(both);
   free(first_wire);
   free(second_wire);
@@ -408,7 +394,6 @@ Ensure(caller_buffer_complete_then_split) {
   assert_that(result.frames_count, is_equal_to(1));
   wsc_test_assert_frame(&result.frames[0], &second);
 
-  wsc_decoder_destroy(decoder);
   free(both);
   free(first_wire);
   free(second_wire);
@@ -427,7 +412,6 @@ Ensure(caller_buffer_no_memory) {
   assert_that(decoder, is_non_null);
   result = wsc_decoder_feed(decoder, wire, wire_length);
   assert_that(result.err, is_equal_to(WSC_ERR_NO_MEMORY));
-  wsc_decoder_destroy(decoder);
   free(wire);
 }
 

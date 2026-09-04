@@ -21,10 +21,6 @@ cmake -B build -DWSC_HOSTED=OFF && cmake --build build && ctest --test-dir build
 See [CMakeLists.txt](CMakeLists.txt) and [tests/CMakeLists.txt](tests/CMakeLists.txt) for
 options and dependencies.
 
-`WSC_HOSTED` (default ON) selects a heap-backed decoder and `wsc_encode`. When OFF, the
-library is freestanding: `wsc_decoder_create` with a caller buffer, ringalloc for decode,
-and `wsc_encode` into a caller buffer.
-
 ## Style
 
 Run the [build](#build) step first when `compile_commands.json` is missing or stale.
