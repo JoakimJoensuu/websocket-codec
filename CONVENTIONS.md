@@ -12,6 +12,9 @@ most readable way.
 Parenthesize sizeof operands, even when the grammar allows omitting
 them.
 
+Write range checks in ascending order. Inclusive: min <= value && value <= max.
+Exclusive: min < value && value < max.
+
 ## Writing
 
 Keep it short. Commit and PR titles too.
