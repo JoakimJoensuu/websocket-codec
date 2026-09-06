@@ -9,6 +9,7 @@
 #endif
 
 #include <limits.h>
+#include <stdbool.h>
 #include <stdint.h>
 #include <string.h>
 
@@ -146,11 +147,13 @@ size_t wsc_encode_buffer(uint8_t *destination, size_t destination_capacity,
   return write_frame(destination, frame);
 }
 
-static struct wsc_decoding_result make_result(struct wsc_decoder_data *decoder) {
+static struct wsc_decoding_result make_result(struct wsc_decoder_data *decoder, size_t consumed,
+                                             enum wsc_err err) {
   return (struct wsc_decoding_result){
-      .err = decoder->last_err,
+      .err = err,
       .frames = decoder->frames_count ? decoder->frames : nullptr,
       .frames_count = decoder->frames_count,
+      .consumed = consumed,
   };
 }
 
@@ -158,6 +161,16 @@ static enum wsc_err fail(struct wsc_decoder_data *decoder, enum wsc_err err) {
   decoder->last_err = err;
   decoder->state = WSC_STATE_DEAD;
   return err;
+}
+
+static bool header_ready(const struct wsc_decoder_data *decoder) {
+  return decoder->state == WSC_STATE_HEADER && decoder->header_received >= decoder->header_total &&
+         decoder->header_total >= WSC_HEADER_BASE;
+}
+
+static bool payload_ready(const struct wsc_decoder_data *decoder) {
+  return decoder->state == WSC_STATE_PAYLOAD &&
+         decoder->payload_received >= decoder->payload_length;
 }
 
 static int frames_push(struct wsc_decoder_data *decoder, struct wsc_frame frame) {
@@ -188,12 +201,12 @@ static enum wsc_err emit(struct wsc_decoder_data *decoder) {
   if (frame.payload_length > 0) {
     enum wsc_err err = wsc_attach_payload(decoder, &frame);
     if (err != WSC_OK) {
-      return fail(decoder, err);
+      return err;
     }
   }
   if (frames_push(decoder, frame) != 0) {
     wsc_discard_payload(&frame);
-    return fail(decoder, WSC_ERR_NO_MEMORY);
+    return WSC_ERR_NO_MEMORY;
   }
   wsc_payload_emitted(decoder);
   decoder->payload.length = 0;
@@ -248,7 +261,7 @@ static enum wsc_err on_header(struct wsc_decoder_data *decoder) {
   }
 
   if (payload_length > (uint64_t)(size_t)-1) {
-    return fail(decoder, WSC_ERR_NO_MEMORY);
+    return WSC_ERR_NO_MEMORY;
   }
 
   decoder->payload_length = payload_length;
@@ -266,7 +279,7 @@ static enum wsc_err on_header(struct wsc_decoder_data *decoder) {
   }
 
   if (wsc_buffer_reserve(decoder, &decoder->payload, (size_t)payload_length) != 0) {
-    return fail(decoder, WSC_ERR_NO_MEMORY);
+    return WSC_ERR_NO_MEMORY;
   }
   decoder->state = WSC_STATE_PAYLOAD;
   return WSC_OK;
@@ -344,12 +357,25 @@ struct wsc_decoding_result wsc_decoder_feed_data(struct wsc_decoder_data *decode
   }
   wsc_clear_frames(decoder);
   if (decoder->state == WSC_STATE_DEAD) {
-    return make_result(decoder);
+    return make_result(decoder, 0, decoder->last_err);
   }
+
+  enum wsc_err err = WSC_OK;
+  if (payload_ready(decoder)) {
+    err = on_payload_done(decoder);
+    if (err != WSC_OK) {
+      return make_result(decoder, 0, err);
+    }
+  } else if (header_ready(decoder)) {
+    err = on_header(decoder);
+    if (err != WSC_OK) {
+      return make_result(decoder, 0, err);
+    }
+  }
+
   size_t offset = 0;
   while (offset < length && decoder->state != WSC_STATE_DEAD) {
     size_t used = 0;
-    enum wsc_err err = WSC_OK;
     if (decoder->state == WSC_STATE_HEADER) {
       err = feed_header(decoder, source + offset, length - offset, &used);
     } else {
@@ -363,5 +389,5 @@ struct wsc_decoding_result wsc_decoder_feed_data(struct wsc_decoder_data *decode
       break;
     }
   }
-  return make_result(decoder);
+  return make_result(decoder, offset, err);
 }

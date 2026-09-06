@@ -49,6 +49,7 @@ struct wsc_decoding_result {
   enum wsc_err err;
   const struct wsc_frame *frames;
   size_t frames_count;
+  size_t consumed;
 };
 
 struct wsc_decoder;
@@ -77,9 +78,11 @@ void wsc_decoder_destroy(struct wsc_decoder *decoder);
  * format, RFC 6455 §5.3). The caller owns @c decoding_result.frames and each
  * @c payload; free them with wsc_decoding_result_destroy. A later feed does not
  * invalidate prior results.
- * @c decoding_result.err other than WSC_OK leaves the decoder unusable; later feeds
- * return the same error until a new decoder is created. Frames already in that
- * result are still owned by the caller.
+ * @c decoding_result.consumed is how many bytes of @p source were accepted; re-feed
+ * the remainder after soft errors.
+ * @c WSC_ERR_NO_MEMORY does not kill the decoder; free held results or retry later.
+ * Protocol errors leave the decoder unusable until a new one is created. Frames
+ * already in that result are still owned by the caller.
  */
 struct wsc_decoding_result wsc_decoder_feed(struct wsc_decoder *decoder, const uint8_t *source,
                                             size_t length);
@@ -118,8 +121,10 @@ size_t wsc_encode(uint8_t *destination, size_t destination_capacity, const struc
  *
  * Completed frames and payloads are stored in the arena and unmasked (masking is
  * wire format, RFC 6455 §5.3). They are valid until the next wsc_decoder_feed.
- * @c decoding_result.err other than WSC_OK leaves the decoder unusable; later feeds
- * return the same error until a new decoder is created.
+ * @c decoding_result.consumed is how many bytes of @p source were accepted; re-feed
+ * the remainder after soft errors.
+ * @c WSC_ERR_NO_MEMORY does not kill the decoder; make room in the arena and retry.
+ * Protocol errors leave the decoder unusable until a new one is created.
  */
 struct wsc_decoding_result wsc_decoder_feed(struct wsc_decoder *decoder, const uint8_t *source,
                                             size_t length);
