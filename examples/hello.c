@@ -23,11 +23,13 @@ int main() {
   }
   struct wsc_decoding_result result = wsc_decoder_feed(decoder, encoded.data, encoded.data_length);
   if (result.err != WSC_OK || result.frames_count != 1) {
+    wsc_decoding_result_destroy(&result);
     free(encoded.data);
     wsc_decoder_destroy(decoder);
     return 1;
   }
   printf("%.*s\n", (int)result.frames[0].payload_length, (const char *)result.frames[0].payload);
+  wsc_decoding_result_destroy(&result);
   free(encoded.data);
   wsc_decoder_destroy(decoder);
   return 0;
