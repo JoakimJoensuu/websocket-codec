@@ -58,7 +58,11 @@ struct wsc_decoder;
 /** @return Heap decoder, or nullptr on OOM. */
 struct wsc_decoder *wsc_decoder_create();
 
-/** Heap encoding, or WSC_ERR_NO_MEMORY. Caller frees @c encoding_result.data. */
+/**
+ * @return Encoding result. On success, @c encoding_result.data is heap-allocated
+ *         and the caller frees it. On @c WSC_ERR_NO_MEMORY, @c data is nullptr and
+ *         @c data_length is 0.
+ */
 struct wsc_encoding_result wsc_encode(const struct wsc_frame *frame);
 
 /**
@@ -70,7 +74,7 @@ void wsc_decoder_destroy(struct wsc_decoder *decoder);
 
 /**
  * Decoder state is stored at the first suitably aligned address in @p arena;
- * ring allocations use what remains after that. The handle may differ from
+ * remaining arena is used for allocations. The handle may differ from
  * @p arena when alignment padding is needed. Does not take ownership of @p arena.
  * @return Opaque handle into @p arena, or nullptr if @p arena is too small.
  */
@@ -84,7 +88,8 @@ size_t wsc_encoded_length(const struct wsc_frame *frame);
  *
  * @p destination_capacity must be at least wsc_encoded_length(@p frame); smaller is a
  * programming error. If @c frame->masked, the payload is masked with
- * @c frame->masking_key; otherwise it is not masked.
+ * @c frame->masking_key.
+ * @return Bytes written (same as wsc_encoded_length(@p frame)).
  */
 size_t wsc_encode(uint8_t *destination, size_t destination_capacity, const struct wsc_frame *frame);
 
@@ -93,10 +98,11 @@ size_t wsc_encode(uint8_t *destination, size_t destination_capacity, const struc
 /**
  * Parse @p source. Incomplete frames stay in the decoder.
  *
- * Completed frames are copied and unmasked (masking is wire format, RFC 6455 §5.3).
- * They are valid until the next wsc_decoder_feed.
- * A non-WSC_OK result leaves the decoder unusable; later feeds return the same
- * error until a new decoder is created.
+ * Completed frames and payloads are stored in decoder-owned memory and unmasked
+ * (masking is wire format, RFC 6455 §5.3). They are valid until the next
+ * wsc_decoder_feed.
+ * @c decoding_result.err other than WSC_OK leaves the decoder unusable; later feeds
+ * return the same error until a new decoder is created.
  */
 struct wsc_decoding_result wsc_decoder_feed(struct wsc_decoder *decoder, const uint8_t *source,
                                             size_t length);
