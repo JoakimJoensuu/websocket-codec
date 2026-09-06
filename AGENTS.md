@@ -52,6 +52,6 @@ Run and pass any checks described in documentation or configs.
 
 Do not attribute a commit or pull request to a tool or agent.
 
-After pushing to a branch with an open pull request, ask whether to update
-the title and body to match the current diff. Do not update them without
-confirmation unless the user asked.
+After pushing to a branch with an open pull request, update the title and
+body only when they no longer match the current diff. Ask before changing
+them unless the user already asked.
