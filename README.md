@@ -1,8 +1,9 @@
 # WebSocket codec
 
-Encode and decode one WebSocket frame (RFC 6455 §§5.2–5.3). Incremental: a
-frame may split across feeds. No HTTP, TCP, TLS, session, or message
-reassembly. API in [include/wsc.h](include/wsc.h).
+Encode and decode WebSocket frames (RFC 6455 §§5.2–5.3). Incremental: a
+frame may split across feeds; each feed returns zero or more completed frames.
+No HTTP, TCP, TLS, session, or message reassembly. API in
+[include/wsc.h](include/wsc.h).
 
 ## Build
 

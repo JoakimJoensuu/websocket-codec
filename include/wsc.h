@@ -2,7 +2,7 @@
 #define WSC_H
 
 /**
- * Encode and decode one WebSocket frame (RFC 6455 §§5.2–5.3).
+ * Encode and decode WebSocket frames (RFC 6455 §§5.2–5.3).
  */
 
 #include <stdbool.h>
