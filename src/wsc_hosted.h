@@ -31,6 +31,4 @@ struct wsc_decoder_data {
 
 void wsc_decoder_free(struct wsc_decoder_data *decoder);
 
-size_t wsc_encoded_frame_length(const struct wsc_frame *frame);
-
 #endif /* WSC_HOSTED_H */
