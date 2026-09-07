@@ -44,7 +44,7 @@ else()
   FetchContent_Declare(
     ringalloc
     GIT_REPOSITORY https://github.com/JoakimJoensuu/ringalloc.git
-    GIT_TAG 49e985681fa8a4000d902f49bc00d7087b3be055)
+    GIT_TAG 43098d590c0670ea0ca67eb7634abab4047485f1)
   FetchContent_MakeAvailable(ringalloc)
   add_library(wsc src/wsc.c src/wsc_freestanding.c)
   target_compile_options(wsc PRIVATE -ffreestanding)

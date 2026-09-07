@@ -31,20 +31,9 @@ int wsc_buffer_reserve(struct wsc_decoder_data *decoder, struct wsc_buffer *buff
 
 void wsc_clear_frames(struct wsc_decoder_data *decoder) {
   if (decoder->state == WSC_STATE_PAYLOAD && decoder->payload.data != nullptr) {
-    size_t capacity = decoder->payload.capacity;
-    size_t length = decoder->payload.length;
-    uint8_t *old = decoder->payload.data;
-    ra_reset(decoder->ringalloc);
-    uint8_t *fresh = ra_allocate(decoder->ringalloc, capacity);
-    if (fresh == nullptr) {
-      wsc_trap();
-    }
-    memmove(fresh, old, length);
-    decoder->payload.data = fresh;
-    decoder->payload.capacity = capacity;
-    decoder->payload.length = length;
+    ra_free_before(decoder->ringalloc, decoder->payload.data);
   } else {
-    ra_reset(decoder->ringalloc);
+    ra_free_all(decoder->ringalloc);
     decoder->payload.data = nullptr;
     decoder->payload.length = 0;
     decoder->payload.capacity = 0;
@@ -111,7 +100,7 @@ struct wsc_decoder *wsc_decoder_create(unsigned char *arena, size_t capacity) {
   unsigned char *slot = arena + skip;
   size_t after = skip + sizeof(struct wsc_decoder_data);
   struct wsc_decoder_data data = {};
-  data.ringalloc = ra_initialize(arena + after, capacity - after);
+  data.ringalloc = ra_create(arena + after, capacity - after);
   if (data.ringalloc == nullptr) {
     return nullptr;
   }
