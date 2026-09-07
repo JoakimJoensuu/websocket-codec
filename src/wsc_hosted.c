@@ -135,7 +135,7 @@ void wsc_decoding_result_destroy(struct wsc_decoding_result *result) {
 
 struct wsc_encoding_result wsc_encode(const struct wsc_frame *frame) {
   struct wsc_encoding_result result = {.err = WSC_OK};
-  size_t total = wsc_encoded_length(frame);
+  size_t total = wsc_encoded_frame_length(frame);
 
   result.data_length = total;
   result.data = malloc(total);

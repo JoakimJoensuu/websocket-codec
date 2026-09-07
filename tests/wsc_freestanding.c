@@ -23,7 +23,7 @@ static struct wsc_decoder *decoder_open(struct decoder_ctx *ctx) {
 }
 
 static uint8_t *encode_wire(const struct wsc_frame *frame, size_t *wire_length) {
-  size_t encoded_length = wsc_encoded_length(frame);
+  size_t encoded_length = wsc_encoded_frame_length(frame);
   uint8_t *wire = malloc(encoded_length);
   assert_that(wire, is_non_null);
   *wire_length = wsc_encode(wire, encoded_length, frame);

@@ -131,7 +131,7 @@ static size_t write_frame(uint8_t *destination, const struct wsc_frame *frame) {
   return header_length + frame->payload_length;
 }
 
-size_t wsc_encoded_length(const struct wsc_frame *frame) {
+size_t wsc_encoded_frame_length(const struct wsc_frame *frame) {
   return encoded_length(frame);
 }
 
@@ -147,13 +147,13 @@ size_t wsc_encode_buffer(uint8_t *destination, size_t destination_capacity,
   return write_frame(destination, frame);
 }
 
-static struct wsc_decoding_result make_result(struct wsc_decoder_data *decoder, size_t consumed,
-                                             enum wsc_err err) {
+static struct wsc_decoding_result make_result(struct wsc_decoder_data *decoder,
+                                              size_t source_consumed, enum wsc_err err) {
   return (struct wsc_decoding_result){
       .err = err,
       .frames = decoder->frames_count ? decoder->frames : nullptr,
       .frames_count = decoder->frames_count,
-      .consumed = consumed,
+      .source_consumed = source_consumed,
   };
 }
 

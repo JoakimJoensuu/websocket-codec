@@ -34,7 +34,7 @@ static void roundtrip(const struct wsc_frame *want) {
   assert_that(decoder, is_non_null);
   result = wsc_decoder_feed(decoder, wire, wire_length);
   assert_that(result.err, is_equal_to(WSC_OK));
-  assert_that(result.consumed, is_equal_to(wire_length));
+  assert_that(result.source_consumed, is_equal_to(wire_length));
   assert_that(result.frames_count, is_equal_to(1));
   wsc_test_assert_frame(&result.frames[0], want);
   destroy_result(&result);
@@ -51,12 +51,12 @@ static void roundtrip_split(const struct wsc_frame *want, size_t first) {
   assert_that(first < wire_length, is_true);
   result = wsc_decoder_feed(decoder, wire, first);
   assert_that(result.err, is_equal_to(WSC_OK));
-  assert_that(result.consumed, is_equal_to(first));
+  assert_that(result.source_consumed, is_equal_to(first));
   assert_that(result.frames_count, is_equal_to(0));
   destroy_result(&result);
   result = wsc_decoder_feed(decoder, wire + first, wire_length - first);
   assert_that(result.err, is_equal_to(WSC_OK));
-  assert_that(result.consumed, is_equal_to(wire_length - first));
+  assert_that(result.source_consumed, is_equal_to(wire_length - first));
   assert_that(result.frames_count, is_equal_to(1));
   wsc_test_assert_frame(&result.frames[0], want);
   destroy_result(&result);
@@ -268,7 +268,7 @@ Ensure(non_minimal_length16) {
   destroy_result(&result);
   result = wsc_decoder_feed(decoder, wire, wire_length);
   assert_that(result.err, is_equal_to(WSC_ERR_LENGTH_NOT_MINIMAL));
-  assert_that(result.consumed, is_equal_to(0));
+  assert_that(result.source_consumed, is_equal_to(0));
   destroy_result(&result);
   wsc_decoder_destroy(decoder);
 }
