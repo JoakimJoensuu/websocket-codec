@@ -61,7 +61,8 @@ struct wsc_decoder *wsc_decoder_create();
 
 /**
  * @return Encoding result. On success, the caller frees @c encoding_result.data.
- *         On @c WSC_ERR_NO_MEMORY, @c data is nullptr and @c data_length is 0.
+ *         On @c WSC_ERR_NO_MEMORY, @c encoding_result.data is nullptr and
+ *         @c encoding_result.data_length is 0.
  */
 struct wsc_encoding_result wsc_encode(const struct wsc_frame *frame);
 
@@ -74,7 +75,7 @@ void wsc_decoder_destroy(struct wsc_decoder *decoder);
  * Parse @p source. Incomplete frames stay in the decoder.
  *
  * Completed frames and payloads are unmasked. The caller owns
- * @c decoding_result.frames and each @c payload; free them with
+ * @c decoding_result.frames and each frame's payload; free them with
  * wsc_decoding_result_free. A later feed does not invalidate prior results.
  * @c decoding_result.source_consumed is how many bytes of @p source were accepted;
  * re-feed the remainder after @c WSC_ERR_NO_MEMORY.
@@ -86,8 +87,9 @@ struct wsc_decoding_result wsc_decoder_feed(struct wsc_decoder *decoder, const u
                                             size_t length);
 
 /**
- * Frees @c decoding_result.frames and each payload. No-op if there are no frames.
- * After return those pointers must not be used. Safe to call once per feed result.
+ * Frees @c decoding_result.frames and each frame's payload. No-op if there are no
+ * frames. After return those pointers must not be used. Safe to call once per feed
+ * result.
  */
 void wsc_decoding_result_free(struct wsc_decoding_result result);
 
