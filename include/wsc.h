@@ -9,7 +9,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-enum wsc_err {
+enum wsc_status {
   WSC_OK                     = 0,
   WSC_ERR_NO_MEMORY          = -1,
   WSC_ERR_LENGTH_NOT_MINIMAL = -2,
@@ -40,13 +40,13 @@ struct wsc_frame {
 };
 
 struct wsc_encoding_result {
-  enum wsc_err err;
+  enum wsc_status status;
   uint8_t *data;
   size_t data_length;
 };
 
 struct wsc_decoding_result {
-  enum wsc_err err;
+  enum wsc_status status;
   const struct wsc_frame *frames;
   size_t frames_count;
   size_t source_consumed;
@@ -78,7 +78,7 @@ void wsc_decoder_destroy(struct wsc_decoder *decoder);
  * wsc_decoding_result_free. A later feed does not invalidate prior results.
  * @c decoding_result.source_consumed is how many bytes of @p source were accepted;
  * re-feed the remainder after @c WSC_ERR_NO_MEMORY.
- * @c decoding_result.err of @c WSC_ERR_NO_MEMORY does not kill the decoder; free
+ * @c decoding_result.status of @c WSC_ERR_NO_MEMORY does not kill the decoder; free
  * held results or retry later. Protocol errors leave the decoder unusable until a
  * new one is created. Frames already in that result are still owned by the caller.
  */
@@ -119,7 +119,7 @@ size_t wsc_encode(uint8_t *destination, size_t destination_capacity, const struc
  * valid until the next wsc_decoder_feed.
  * @c decoding_result.source_consumed is how many bytes of @p source were accepted;
  * re-feed the remainder after @c WSC_ERR_NO_MEMORY.
- * @c decoding_result.err of @c WSC_ERR_NO_MEMORY does not kill the decoder; finish
+ * @c decoding_result.status of @c WSC_ERR_NO_MEMORY does not kill the decoder; finish
  * with the result before the next feed, then re-feed the unconsumed suffix, or
  * create a decoder with a larger arena. Protocol errors leave the decoder
  * unusable until a new one is created.

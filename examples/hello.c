@@ -17,12 +17,12 @@ int main() {
     return 1;
   }
   struct wsc_encoding_result encoded = wsc_encode(&frame);
-  if (encoded.err != WSC_OK) {
+  if (encoded.status != WSC_OK) {
     wsc_decoder_destroy(decoder);
     return 1;
   }
   struct wsc_decoding_result result = wsc_decoder_feed(decoder, encoded.data, encoded.data_length);
-  if (result.err != WSC_OK || result.frames_count != 1) {
+  if (result.status != WSC_OK || result.frames_count != 1) {
     wsc_decoding_result_free(result);
     free(encoded.data);
     wsc_decoder_destroy(decoder);

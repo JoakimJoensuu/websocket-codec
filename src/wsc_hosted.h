@@ -18,7 +18,7 @@ struct wsc_decoder_data {
   size_t header_total;
   enum wsc_parse_state state;
   unsigned mask_offset;
-  enum wsc_err last_err;
+  enum wsc_status last_status;
   bool fin;
   bool rsv1;
   bool rsv2;

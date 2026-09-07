@@ -54,7 +54,7 @@ int wsc_frames_reserve(struct wsc_decoder_data *decoder, size_t capacity) {
   return 0;
 }
 
-enum wsc_err wsc_attach_payload(struct wsc_decoder_data *decoder, struct wsc_frame *frame) {
+enum wsc_status wsc_attach_payload(struct wsc_decoder_data *decoder, struct wsc_frame *frame) {
   if (decoder->payload.data == nullptr) {
     wsc_trap();
   }
@@ -128,13 +128,13 @@ void wsc_decoding_result_free(struct wsc_decoding_result result) {
 }
 
 struct wsc_encoding_result wsc_encode(const struct wsc_frame *frame) {
-  struct wsc_encoding_result result = {.err = WSC_OK};
+  struct wsc_encoding_result result = {.status = WSC_OK};
   size_t total = wsc_encoded_frame_length(frame);
 
   result.data_length = total;
   result.data = malloc(total);
   if (result.data == nullptr) {
-    result.err = WSC_ERR_NO_MEMORY;
+    result.status = WSC_ERR_NO_MEMORY;
     result.data_length = 0;
     return result;
   }

@@ -58,7 +58,7 @@ void wsc_clear_frames(struct wsc_decoder_data *decoder);
 
 int wsc_frames_reserve(struct wsc_decoder_data *decoder, size_t capacity);
 
-enum wsc_err wsc_attach_payload(struct wsc_decoder_data *decoder, struct wsc_frame *frame);
+enum wsc_status wsc_attach_payload(struct wsc_decoder_data *decoder, struct wsc_frame *frame);
 
 void wsc_discard_payload(struct wsc_frame *frame);
 
