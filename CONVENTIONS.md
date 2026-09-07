@@ -72,6 +72,9 @@ Comment only what names, types, and control flow cannot say. When a public
 declaration needs a comment, write it there in Doxygen style, not on the
 definition.
 
+In public Doxygen comments, refer to fields of a returned struct as
+`type_name.field`, not bare field names.
+
 ## Tests
 
 Assert observable behaviour through the public API, not internal
