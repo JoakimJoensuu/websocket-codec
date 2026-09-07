@@ -117,20 +117,14 @@ struct wsc_decoding_result wsc_decoder_feed(struct wsc_decoder *decoder, const u
   return result;
 }
 
-void wsc_decoding_result_destroy(struct wsc_decoding_result *result) {
-  if (result == nullptr) {
+void wsc_decoding_result_free(struct wsc_decoding_result result) {
+  if (result.frames == nullptr) {
     return;
   }
-  if (result->frames == nullptr) {
-    result->frames_count = 0;
-    return;
+  for (size_t i = 0; i < result.frames_count; i++) {
+    free((void *)result.frames[i].payload);
   }
-  for (size_t i = 0; i < result->frames_count; i++) {
-    free((void *)result->frames[i].payload);
-  }
-  free((void *)result->frames);
-  result->frames = nullptr;
-  result->frames_count = 0;
+  free((void *)result.frames);
 }
 
 struct wsc_encoding_result wsc_encode(const struct wsc_frame *frame) {

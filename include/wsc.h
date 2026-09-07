@@ -75,7 +75,7 @@ void wsc_decoder_destroy(struct wsc_decoder *decoder);
  *
  * Completed frames and payloads are unmasked. The caller owns
  * @c decoding_result.frames and each @c payload; free them with
- * wsc_decoding_result_destroy. A later feed does not invalidate prior results.
+ * wsc_decoding_result_free. A later feed does not invalidate prior results.
  * @c decoding_result.source_consumed is how many bytes of @p source were accepted;
  * re-feed the remainder after @c WSC_ERR_NO_MEMORY.
  * @c decoding_result.err of @c WSC_ERR_NO_MEMORY does not kill the decoder; free
@@ -86,10 +86,10 @@ struct wsc_decoding_result wsc_decoder_feed(struct wsc_decoder *decoder, const u
                                             size_t length);
 
 /**
- * Frees @c decoding_result.frames and each payload. No-op if @p result is nullptr
- * or has no frames. Safe to call once per feed result.
+ * Frees @c decoding_result.frames and each payload. No-op if there are no frames.
+ * After return those pointers must not be used. Safe to call once per feed result.
  */
-void wsc_decoding_result_destroy(struct wsc_decoding_result *result);
+void wsc_decoding_result_free(struct wsc_decoding_result result);
 
 #elifndef WSC_HOSTED
 
