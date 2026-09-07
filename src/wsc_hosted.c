@@ -1,6 +1,6 @@
 #include "wsc_hosted.h"
 #include "wsc.h"
-#include "wsc_internal.h"
+#include "wsc_common.h"
 
 #include <stdint.h>
 #include <stdlib.h>

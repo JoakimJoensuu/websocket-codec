@@ -1,5 +1,5 @@
-#ifndef WSC_INTERNAL_H
-#define WSC_INTERNAL_H
+#ifndef WSC_COMMON_H
+#define WSC_COMMON_H
 
 #include "wsc.h"
 
@@ -70,4 +70,4 @@ size_t wsc_encode_buffer(uint8_t *destination, size_t destination_capacity,
 struct wsc_decoding_result wsc_decoder_feed_data(struct wsc_decoder_data *decoder,
                                                  const uint8_t *source, size_t length);
 
-#endif /* WSC_INTERNAL_H */
+#endif /* WSC_COMMON_H */

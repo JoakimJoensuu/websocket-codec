@@ -1,6 +1,6 @@
 #include "wsc_freestanding.h"
 #include "wsc.h"
-#include "wsc_internal.h"
+#include "wsc_common.h"
 
 #include <ringalloc.h>
 #include <stdint.h>

@@ -1,7 +1,7 @@
 #ifndef WSC_FREESTANDING_H
 #define WSC_FREESTANDING_H
 
-#include "wsc_internal.h"
+#include "wsc_common.h"
 
 #include <ringalloc.h>
 #include <string.h>
