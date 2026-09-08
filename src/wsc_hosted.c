@@ -6,6 +6,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+[[noreturn]] void wsc_trap() {
+  abort();
+}
+
 int wsc_buffer_reserve(struct wsc_decoder_data *decoder, struct wsc_buffer *buffer,
                        size_t minimum_capacity) {
   (void)decoder;

@@ -6,8 +6,6 @@
 #include <ringalloc.h>
 #include <string.h>
 
-#define wsc_trap() unreachable()
-
 struct wsc_decoder_data {
   uint64_t payload_length;
   uint64_t payload_received;

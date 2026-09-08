@@ -49,6 +49,8 @@ struct wsc_buffer {
 
 struct wsc_decoder_data;
 
+[[noreturn]] void wsc_trap();
+
 void wsc_decoder_state_init(struct wsc_decoder_data *decoder);
 
 int wsc_buffer_reserve(struct wsc_decoder_data *decoder, struct wsc_buffer *buffer,

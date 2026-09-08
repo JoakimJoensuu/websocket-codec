@@ -3,10 +3,6 @@
 
 #include "wsc_common.h"
 
-#include <stdlib.h>
-
-#define wsc_trap() abort()
-
 struct wsc_decoder_data {
   uint64_t payload_length;
   uint64_t payload_received;

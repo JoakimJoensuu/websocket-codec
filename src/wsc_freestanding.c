@@ -3,8 +3,13 @@
 #include "wsc_common.h"
 
 #include <ringalloc.h>
+#include <stddef.h>
 #include <stdint.h>
 #include <string.h>
+
+[[noreturn]] void wsc_trap() {
+  unreachable();
+}
 
 int wsc_buffer_reserve(struct wsc_decoder_data *decoder, struct wsc_buffer *buffer,
                        size_t minimum_capacity) {
