@@ -122,8 +122,9 @@ size_t wsc_encode(uint8_t *destination, size_t destination_capacity, const struc
  * @c decoding_result.source_consumed is how many bytes of @p source were accepted;
  * re-feed the remainder after @c WSC_ERR_NO_MEMORY.
  * @c decoding_result.status of @c WSC_ERR_NO_MEMORY does not kill the decoder; finish
- * with the result before the next feed, then re-feed the unconsumed suffix, or
- * create a decoder with a larger arena. Protocol errors leave the decoder
+ * with the result before the next feed, then re-feed the unconsumed suffix. A larger
+ * arena needs a new decoder and a replay of the full in-progress frame (bytes already
+ * accepted on earlier feeds, then the remainder). Protocol errors leave the decoder
  * unusable until a new one is created.
  */
 struct wsc_decoding_result wsc_decoder_feed(struct wsc_decoder *decoder, const uint8_t *source,
