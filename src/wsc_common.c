@@ -1,5 +1,12 @@
-#ifndef WSC_COMMON_C_INCLUDED
-#define WSC_COMMON_C_INCLUDED
+
+#include "wsc_common.h"
+#include "wsc.h"
+
+#ifdef WSC_HOSTED
+#include "wsc_hosted.h"
+#elifndef WSC_HOSTED
+#include "wsc_freestanding.h"
+#endif
 
 #include <limits.h>
 #include <stdbool.h>
@@ -124,15 +131,12 @@ static size_t write_frame(uint8_t *destination, const struct wsc_frame *frame) {
   return header_length + frame->payload_length;
 }
 
-#ifdef WSC_HOSTED
-static
-#endif
-    size_t wsc_encoded_frame_length(const struct wsc_frame *frame) {
+size_t wsc_encoded_frame_length(const struct wsc_frame *frame) {
   return encoded_length(frame);
 }
 
-static size_t wsc_encode_buffer(uint8_t *destination, size_t destination_capacity,
-                                const struct wsc_frame *frame) {
+size_t wsc_encode_buffer(uint8_t *destination, size_t destination_capacity,
+                         const struct wsc_frame *frame) {
   size_t total = encoded_length(frame);
   if (destination == nullptr) {
     wsc_trap();
@@ -341,13 +345,13 @@ static enum wsc_status feed_payload(struct wsc_decoder_data *decoder, const uint
   return WSC_OK;
 }
 
-static void wsc_decoder_state_init(struct wsc_decoder_data *decoder) {
+void wsc_decoder_state_init(struct wsc_decoder_data *decoder) {
   decoder->state = WSC_STATE_HEADER;
   decoder->header_total = WSC_HEADER_BASE;
 }
 
-static struct wsc_decoding_result wsc_decoder_feed_data(struct wsc_decoder_data *decoder,
-                                                        const uint8_t *source, size_t length) {
+struct wsc_decoding_result wsc_decoder_feed_data(struct wsc_decoder_data *decoder,
+                                                 const uint8_t *source, size_t length) {
   if (length > 0 && source == nullptr) {
     wsc_trap();
   }
@@ -387,5 +391,3 @@ static struct wsc_decoding_result wsc_decoder_feed_data(struct wsc_decoder_data 
   }
   return make_result(decoder, offset, status);
 }
-
-#endif /* WSC_COMMON_C_INCLUDED */
