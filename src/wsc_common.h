@@ -66,7 +66,9 @@ void wsc_discard_payload(struct wsc_frame *frame);
 
 void wsc_payload_emitted(struct wsc_decoder_data *decoder);
 
+#ifdef WSC_HOSTED
 size_t wsc_encoded_frame_length(const struct wsc_frame *frame);
+#endif
 
 size_t wsc_encode_buffer(uint8_t *destination, size_t destination_capacity,
                          const struct wsc_frame *frame);
