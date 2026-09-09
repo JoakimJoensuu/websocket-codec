@@ -49,7 +49,22 @@ struct wsc_buffer {
 
 struct wsc_decoder_data;
 
+[[noreturn]] void wsc_trap();
+
 void wsc_decoder_state_init(struct wsc_decoder_data *decoder);
+
+int wsc_buffer_reserve(struct wsc_decoder_data *decoder, struct wsc_buffer *buffer,
+                       size_t minimum_capacity);
+
+void wsc_clear_frames(struct wsc_decoder_data *decoder);
+
+int wsc_frames_reserve(struct wsc_decoder_data *decoder, size_t capacity);
+
+enum wsc_status wsc_attach_payload(struct wsc_decoder_data *decoder, struct wsc_frame *frame);
+
+void wsc_discard_payload(struct wsc_frame *frame);
+
+void wsc_payload_emitted(struct wsc_decoder_data *decoder);
 
 #ifdef WSC_HOSTED
 size_t wsc_encoded_frame_length(const struct wsc_frame *frame);

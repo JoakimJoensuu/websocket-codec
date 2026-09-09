@@ -7,6 +7,92 @@
 #include <stdint.h>
 #include <string.h>
 
+[[noreturn]] void wsc_trap() {
+  unreachable();
+}
+
+int wsc_buffer_reserve(struct wsc_decoder_data *decoder, struct wsc_buffer *buffer,
+                       size_t minimum_capacity) {
+  if (minimum_capacity <= buffer->capacity) {
+    return 0;
+  }
+  if (buffer->data != nullptr) {
+    uint8_t *new_buffer = ra_reallocate(decoder->ringalloc, buffer->data, minimum_capacity);
+    if (new_buffer == nullptr) {
+      return -1;
+    }
+    buffer->data = new_buffer;
+    buffer->capacity = minimum_capacity;
+    return 0;
+  }
+  uint8_t *new_buffer = ra_allocate(decoder->ringalloc, minimum_capacity);
+  if (new_buffer == nullptr) {
+    return -1;
+  }
+  buffer->data = new_buffer;
+  buffer->capacity = minimum_capacity;
+  return 0;
+}
+
+void wsc_clear_frames(struct wsc_decoder_data *decoder) {
+  if (decoder->state == WSC_STATE_PAYLOAD && decoder->payload.data != nullptr) {
+    ra_free_before(decoder->ringalloc, decoder->payload.data);
+  } else {
+    ra_free_all(decoder->ringalloc);
+    decoder->payload.data = nullptr;
+    decoder->payload.length = 0;
+    decoder->payload.capacity = 0;
+  }
+  decoder->frames = nullptr;
+  decoder->frames_count = 0;
+  decoder->frames_capacity = 0;
+}
+
+int wsc_frames_reserve(struct wsc_decoder_data *decoder, size_t capacity) {
+  if (capacity <= decoder->frames_capacity) {
+    return -1;
+  }
+  if (capacity > ((size_t)-1) / sizeof(struct wsc_frame)) {
+    return -1;
+  }
+  size_t bytes = capacity * sizeof(struct wsc_frame);
+  if (decoder->frames != nullptr) {
+    struct wsc_frame *new_buffer = ra_reallocate(decoder->ringalloc, decoder->frames, bytes);
+    if (new_buffer != nullptr) {
+      decoder->frames = new_buffer;
+      decoder->frames_capacity = capacity;
+      return 0;
+    }
+  }
+  struct wsc_frame *new_buffer = ra_allocate(decoder->ringalloc, bytes);
+  if (new_buffer == nullptr) {
+    return -1;
+  }
+  if (decoder->frames != nullptr && decoder->frames_count > 0) {
+    memcpy(new_buffer, decoder->frames, decoder->frames_count * sizeof(*new_buffer));
+  }
+  decoder->frames = new_buffer;
+  decoder->frames_capacity = capacity;
+  return 0;
+}
+
+enum wsc_status wsc_attach_payload(struct wsc_decoder_data *decoder, struct wsc_frame *frame) {
+  if (decoder->payload.data == nullptr) {
+    wsc_trap();
+  }
+  frame->payload = decoder->payload.data;
+  return WSC_OK;
+}
+
+void wsc_discard_payload(struct wsc_frame *frame) {
+  (void)frame;
+}
+
+void wsc_payload_emitted(struct wsc_decoder_data *decoder) {
+  decoder->payload.data = nullptr;
+  decoder->payload.capacity = 0;
+}
+
 struct wsc_decoder *wsc_decoder_create(unsigned char *arena, size_t capacity) {
   if (arena == nullptr) {
     wsc_trap();
