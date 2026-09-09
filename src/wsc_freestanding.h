@@ -1,10 +1,10 @@
 #ifndef WSC_FREESTANDING_H
 #define WSC_FREESTANDING_H
 
+#include "wsc.h"
 #include "wsc_common.h"
 
 #include <ringalloc.h>
-#include <string.h>
 
 struct wsc_decoder_data {
   uint64_t payload_length;

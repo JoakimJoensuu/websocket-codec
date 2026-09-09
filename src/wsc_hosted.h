@@ -1,6 +1,7 @@
 #ifndef WSC_HOSTED_H
 #define WSC_HOSTED_H
 
+#include "wsc.h"
 #include "wsc_common.h"
 
 struct wsc_decoder_data {

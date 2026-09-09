@@ -8,7 +8,6 @@
 #include "wsc_freestanding.h"
 #endif
 
-#include <limits.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <string.h>
