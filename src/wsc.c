@@ -8,7 +8,7 @@
 
 #ifdef WSC_HOSTED
 #include <stdlib.h>
-#else
+#elifndef WSC_HOSTED
 #include <ringalloc.h>
 #endif
 
@@ -74,7 +74,7 @@ struct wsc_decoder_data {
   uint8_t masking_key[WSC_MASKING_KEY_LENGTH];
   uint8_t header[WSC_HEADER_MAX];
 };
-#else
+#elifndef WSC_HOSTED
 struct wsc_decoder_data {
   uint64_t payload_length;
   uint64_t payload_received;
@@ -185,7 +185,7 @@ static void wsc_decoder_free(struct wsc_decoder_data *decoder) {
   decoder->payload.capacity = 0;
 }
 
-#else
+#elifndef WSC_HOSTED
 [[noreturn]] static void wsc_trap() {
   unreachable();
 }
@@ -715,7 +715,7 @@ void wsc_decoding_result_free(struct wsc_decoding_result result) {
   free((void *)result.frames);
 }
 
-#else
+#elifndef WSC_HOSTED
 struct wsc_decoder *wsc_decoder_create(unsigned char *arena, size_t capacity) {
   if (arena == nullptr) {
     wsc_trap();
