@@ -4,7 +4,8 @@ Checks: >
   -altera-*,
   -clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling,
   -llvm-header-guard,
-  -*-braces-around-statements
+  -*-braces-around-statements,
+  -bugprone-suspicious-include
 WarningsAsErrors: '*'
 HeaderFilterRegex: '.*'
 FormatStyle: file
