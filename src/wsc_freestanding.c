@@ -563,8 +563,5 @@ struct wsc_decoding_result wsc_decoder_feed(struct wsc_decoder *decoder, const u
   if (decoder == nullptr) {
     wsc_trap();
   }
-  struct wsc_decoder local = *decoder;
-  struct wsc_decoding_result result = wsc_decoder_feed_data(&local, source, length);
-  *decoder = local;
-  return result;
+  return wsc_decoder_feed_data(decoder, source, length);
 }
