@@ -10,6 +10,7 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include <stdlib.h>
 #include <string.h>
 
 static uint16_t read_uint16(const uint8_t *source) {
@@ -130,9 +131,11 @@ static size_t write_frame(uint8_t *destination, const struct wsc_frame *frame) {
   return header_length + frame->payload_length;
 }
 
+#ifndef WSC_HOSTED
 size_t wsc_encoded_frame_length(const struct wsc_frame *frame) {
   return encoded_length(frame);
 }
+#endif
 
 size_t wsc_encode_buffer(uint8_t *destination, size_t destination_capacity,
                          const struct wsc_frame *frame) {
@@ -145,6 +148,23 @@ size_t wsc_encode_buffer(uint8_t *destination, size_t destination_capacity,
   }
   return write_frame(destination, frame);
 }
+
+#ifdef WSC_HOSTED
+struct wsc_encoding_result wsc_encode(const struct wsc_frame *frame) {
+  struct wsc_encoding_result result = {.status = WSC_OK};
+  size_t total = encoded_length(frame);
+
+  result.data_length = total;
+  result.data = malloc(total);
+  if (result.data == nullptr) {
+    result.status = WSC_ERR_NO_MEMORY;
+    result.data_length = 0;
+    return result;
+  }
+  wsc_encode_buffer(result.data, total, frame);
+  return result;
+}
+#endif
 
 static struct wsc_decoding_result make_result(struct wsc_decoder_data *decoder,
                                               size_t source_consumed, enum wsc_status status) {
