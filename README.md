@@ -7,13 +7,13 @@ No HTTP, TCP, TLS, session, or message reassembly. API in
 
 ## Build
 
-Hosted:
+Hosted (`-DWSC_HOSTED=ON` required on every configure; the cache keeps the last value otherwise):
 
 ```sh
-cmake -B build && cmake --build build && ctest --test-dir build
+cmake -B build -DWSC_HOSTED=ON && cmake --build build && ctest --test-dir build
 ```
 
-Freestanding (`-DWSC_HOSTED=OFF` required on every configure):
+Freestanding:
 
 ```sh
 cmake -B build -DWSC_HOSTED=OFF && cmake --build build && ctest --test-dir build
