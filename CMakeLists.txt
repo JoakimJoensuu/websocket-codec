@@ -30,7 +30,34 @@ if(PROJECT_IS_TOP_LEVEL AND (CMAKE_C_COMPILER_ID STREQUAL "Clang" OR CMAKE_C_COM
   target_link_options(wsc_sanitize INTERFACE -fsanitize=address,undefined)
 endif()
 
-option(WSC_HOSTED "Heap-backed decoder and wsc_encode" ON)
+# Bare cmake always uses hosted. Only an explicit -DWSC_HOSTED= on this run
+# overrides the cache (option() would keep a stale OFF forever).
+set(_wsc_hosted_on_cli FALSE)
+if(CMAKE_HOST_UNIX)
+  execute_process(
+    COMMAND sh -c [=[tr '\0' '\n' < /proc/$PPID/cmdline]=]
+    OUTPUT_VARIABLE _wsc_cmdline
+    ERROR_QUIET)
+  string(REPLACE "\n" ";" _wsc_args "${_wsc_cmdline}")
+  foreach(_wsc_arg IN LISTS _wsc_args)
+    if(_wsc_arg MATCHES "^-DWSC_HOSTED(:[^=]*)?=")
+      set(_wsc_hosted_on_cli TRUE)
+    endif()
+  endforeach()
+  unset(_wsc_cmdline)
+  unset(_wsc_args)
+  unset(_wsc_arg)
+endif()
+if(CMAKE_HOST_UNIX)
+  if(_wsc_hosted_on_cli)
+    set(WSC_HOSTED "${WSC_HOSTED}" CACHE BOOL "Heap-backed decoder and wsc_encode")
+  else()
+    set(WSC_HOSTED ON CACHE BOOL "Heap-backed decoder and wsc_encode" FORCE)
+  endif()
+else()
+  option(WSC_HOSTED "Heap-backed decoder and wsc_encode" ON)
+endif()
+unset(_wsc_hosted_on_cli)
 
 if(WSC_HOSTED)
   add_library(wsc src/wsc_hosted.c)
