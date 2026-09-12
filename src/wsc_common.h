@@ -8,8 +8,6 @@
 #include <stddef.h>
 #include <stdint.h>
 
-struct ringalloc;
-
 enum : unsigned {
   WSC_HEADER_BASE  = 2,
   WSC_LENGTH16_EXT = 2,
@@ -50,46 +48,18 @@ struct wsc_buffer {
   size_t capacity;
 };
 
-struct wsc_decoder {
-  uint64_t payload_length;
-  uint64_t payload_received;
-  struct wsc_buffer payload;
-  struct ringalloc *ringalloc;
-  struct wsc_frame *frames;
-  size_t frames_count;
-  size_t frames_capacity;
-  size_t header_received;
-  size_t header_total;
-  enum wsc_parse_state state;
-  unsigned mask_offset;
-  enum wsc_status last_status;
-  bool fin;
-  bool rsv1;
-  bool rsv2;
-  bool rsv3;
-  bool masked;
-  uint8_t opcode;
-  uint8_t masking_key[WSC_MASKING_KEY_LENGTH];
-  uint8_t header[WSC_HEADER_MAX];
-};
-
 [[noreturn]] void wsc_trap();
 
-int wsc_buffer_reserve(struct wsc_decoder *decoder, struct wsc_buffer *buffer,
-                       size_t minimum_capacity);
-void wsc_clear_frames(struct wsc_decoder *decoder);
-int wsc_frames_reserve(struct wsc_decoder *decoder, size_t capacity);
-enum wsc_status wsc_attach_payload(struct wsc_decoder *decoder, struct wsc_frame *frame);
-void wsc_discard_payload(struct wsc_frame *frame);
-void wsc_payload_emitted(struct wsc_decoder *decoder);
+uint16_t read_uint16(const uint8_t *source);
+uint64_t read_uint64(const uint8_t *source);
+void apply_mask(uint8_t *data, size_t length, const uint8_t key[WSC_MASKING_KEY_LENGTH],
+                unsigned offset);
+size_t header_length(unsigned byte1);
 
-void wsc_decoder_state_init(struct wsc_decoder *decoder);
 #ifdef WSC_HOSTED
 size_t wsc_encoded_frame_length(const struct wsc_frame *frame);
 #endif
 size_t wsc_encode_buffer(uint8_t *destination, size_t destination_capacity,
                          const struct wsc_frame *frame);
-struct wsc_decoding_result wsc_decoder_feed_data(struct wsc_decoder *decoder, const uint8_t *source,
-                                                 size_t length);
 
 #endif /* WSC_COMMON_H */
