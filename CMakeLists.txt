@@ -7,9 +7,19 @@ set(CMAKE_C_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 if(PROJECT_IS_TOP_LEVEL)
-  file(REMOVE "${CMAKE_SOURCE_DIR}/compile_commands.json")
-  file(CREATE_LINK "${CMAKE_BINARY_DIR}/compile_commands.json"
-       "${CMAKE_SOURCE_DIR}/compile_commands.json" SYMBOLIC COPY_ON_ERROR)
+  find_package(Python3 COMPONENTS Interpreter QUIET)
+  if(Python3_EXECUTABLE)
+    add_custom_target(
+      wsc_merge_compile_commands ALL
+      COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/scripts/merge-compile-commands.py
+      WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+      COMMENT "Merge compile_commands for clangd"
+      VERBATIM)
+  else()
+    file(REMOVE "${CMAKE_SOURCE_DIR}/compile_commands.json")
+    file(CREATE_LINK "${CMAKE_BINARY_DIR}/compile_commands.json"
+         "${CMAKE_SOURCE_DIR}/compile_commands.json" SYMBOLIC COPY_ON_ERROR)
+  endif()
 endif()
 
 add_library(wsc_warnings INTERFACE)
