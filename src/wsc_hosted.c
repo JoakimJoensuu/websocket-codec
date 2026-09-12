@@ -285,21 +285,6 @@ static size_t wsc_encode_buffer(uint8_t *destination, size_t destination_capacit
   return write_frame(destination, frame);
 }
 
-struct wsc_encoding_result wsc_encode(const struct wsc_frame *frame) {
-  struct wsc_encoding_result result = {.status = WSC_OK};
-  size_t total = wsc_encoded_frame_length(frame);
-
-  result.data_length = total;
-  result.data = malloc(total);
-  if (result.data == nullptr) {
-    result.status = WSC_ERR_NO_MEMORY;
-    result.data_length = 0;
-    return result;
-  }
-  wsc_encode_buffer(result.data, total, frame);
-  return result;
-}
-
 static struct wsc_decoding_result make_result(struct wsc_decoder_data *decoder,
                                               size_t source_consumed, enum wsc_status status) {
   return (struct wsc_decoding_result){
@@ -552,6 +537,21 @@ struct wsc_decoder *wsc_decoder_create() {
   }
   wsc_decoder_state_init(data);
   return (struct wsc_decoder *)data;
+}
+
+struct wsc_encoding_result wsc_encode(const struct wsc_frame *frame) {
+  struct wsc_encoding_result result = {.status = WSC_OK};
+  size_t total = wsc_encoded_frame_length(frame);
+
+  result.data_length = total;
+  result.data = malloc(total);
+  if (result.data == nullptr) {
+    result.status = WSC_ERR_NO_MEMORY;
+    result.data_length = 0;
+    return result;
+  }
+  wsc_encode_buffer(result.data, total, frame);
+  return result;
 }
 
 void wsc_decoder_destroy(struct wsc_decoder *decoder) {

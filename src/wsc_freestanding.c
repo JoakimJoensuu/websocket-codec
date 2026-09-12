@@ -231,15 +231,6 @@ static void require_frame(const struct wsc_frame *frame) {
   }
 }
 
-size_t wsc_encoded_frame_length(const struct wsc_frame *frame) {
-  require_frame(frame);
-  size_t header_length = encoded_header_length(frame->payload_length, frame->masked);
-  if (frame->payload_length > ((size_t)-1) - header_length) {
-    wsc_trap();
-  }
-  return header_length + frame->payload_length;
-}
-
 static size_t write_frame(uint8_t *destination, const struct wsc_frame *frame) {
   uint8_t header[WSC_HEADER_MAX];
   size_t header_length = WSC_HEADER_BASE;
@@ -554,6 +545,20 @@ struct wsc_decoder *wsc_decoder_create(unsigned char *arena, size_t capacity) {
   return (struct wsc_decoder *)slot;
 }
 
+size_t wsc_encoded_frame_length(const struct wsc_frame *frame) {
+  require_frame(frame);
+  size_t header_length = encoded_header_length(frame->payload_length, frame->masked);
+  if (frame->payload_length > ((size_t)-1) - header_length) {
+    wsc_trap();
+  }
+  return header_length + frame->payload_length;
+}
+
+size_t wsc_encode(uint8_t *destination, size_t destination_capacity,
+                  const struct wsc_frame *frame) {
+  return wsc_encode_buffer(destination, destination_capacity, frame);
+}
+
 struct wsc_decoding_result wsc_decoder_feed(struct wsc_decoder *decoder, const uint8_t *source,
                                             size_t length) {
   if (decoder == nullptr) {
@@ -564,9 +569,4 @@ struct wsc_decoding_result wsc_decoder_feed(struct wsc_decoder *decoder, const u
   struct wsc_decoding_result result = wsc_decoder_feed_data(&data, source, length);
   memcpy(decoder, &data, sizeof(data));
   return result;
-}
-
-size_t wsc_encode(uint8_t *destination, size_t destination_capacity,
-                  const struct wsc_frame *frame) {
-  return wsc_encode_buffer(destination, destination_capacity, frame);
 }
