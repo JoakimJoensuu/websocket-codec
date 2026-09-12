@@ -17,36 +17,11 @@ uint64_t read_uint64(const uint8_t *source) {
   return value;
 }
 
-static void write_uint16(uint8_t *destination, uint16_t value) {
-  destination[0] = (uint8_t)((unsigned)value >> WSC_BYTE_BITS);
-  destination[1] = (uint8_t)value;
-}
-
-static void write_uint64(uint8_t *destination, uint64_t value) {
-  for (int i = (int)sizeof(uint64_t) - 1; i >= 0; i--) {
-    destination[i] = (uint8_t)value;
-    value >>= WSC_BYTE_BITS;
-  }
-}
-
 void apply_mask(uint8_t *data, size_t length, const uint8_t key[WSC_MASKING_KEY_LENGTH],
                 unsigned offset) {
   for (size_t i = 0; i < length; i++) {
     data[i] = (uint8_t)((unsigned)data[i] ^ key[(offset + i) & (WSC_MASKING_KEY_LENGTH - 1U)]);
   }
-}
-
-static size_t encoded_header_length(size_t payload_length, bool masked) {
-  size_t header_length = WSC_HEADER_BASE;
-  if (payload_length > UINT16_MAX) {
-    header_length += WSC_LENGTH64_EXT;
-  } else if (payload_length > WSC_LENGTH7_MAX) {
-    header_length += WSC_LENGTH16_EXT;
-  }
-  if (masked) {
-    header_length += WSC_MASKING_KEY_LENGTH;
-  }
-  return header_length;
 }
 
 size_t header_length(unsigned byte1) {
@@ -63,24 +38,17 @@ size_t header_length(unsigned byte1) {
   return header_length;
 }
 
-static void require_frame(const struct wsc_frame *frame) {
+size_t encoded_frame_length(const struct wsc_frame *frame) {
   if (frame == nullptr) {
     wsc_trap();
   }
-  if (frame->payload_length > 0 && frame->payload == nullptr) {
-    wsc_trap();
+  size_t header_length = WSC_HEADER_BASE;
+  if (frame->payload_length > WSC_LENGTH7_MAX) {
+    header_length += frame->payload_length > UINT16_MAX ? WSC_LENGTH64_EXT : WSC_LENGTH16_EXT;
   }
-  if (frame->opcode > WSC_OPCODE_MASK) {
-    wsc_trap();
+  if (frame->masked) {
+    header_length += WSC_MASKING_KEY_LENGTH;
   }
-  if (frame->payload_length > (size_t)(WSC_LENGTH64_MSB - 1)) {
-    wsc_trap();
-  }
-}
-
-size_t encoded_frame_length(const struct wsc_frame *frame) {
-  require_frame(frame);
-  size_t header_length = encoded_header_length(frame->payload_length, frame->masked);
   if (frame->payload_length > ((size_t)-1) - header_length) {
     wsc_trap();
   }
@@ -100,11 +68,18 @@ static size_t write_frame(uint8_t *destination, const struct wsc_frame *frame) {
     header[1] = (uint8_t)frame->payload_length;
   } else if (frame->payload_length <= UINT16_MAX) {
     header[1] = WSC_LENGTH16;
-    write_uint16(header + WSC_HEADER_BASE, (uint16_t)frame->payload_length);
+    header[WSC_HEADER_BASE] = (uint8_t)((unsigned)(uint16_t)frame->payload_length >> WSC_BYTE_BITS);
+    header[WSC_HEADER_BASE + 1] = (uint8_t)(uint16_t)frame->payload_length;
     header_length = WSC_HEADER_BASE + WSC_LENGTH16_EXT;
   } else {
     header[1] = WSC_LENGTH64;
-    write_uint64(header + WSC_HEADER_BASE, (uint64_t)frame->payload_length);
+    {
+      uint64_t value = (uint64_t)frame->payload_length;
+      for (int i = (int)sizeof(uint64_t) - 1; i >= 0; i--) {
+        header[WSC_HEADER_BASE + (size_t)i] = (uint8_t)value;
+        value >>= WSC_BYTE_BITS;
+      }
+    }
     header_length = WSC_HEADER_BASE + WSC_LENGTH64_EXT;
   }
   if (frame->masked) {
@@ -125,6 +100,18 @@ static size_t write_frame(uint8_t *destination, const struct wsc_frame *frame) {
 
 size_t wsc_encode_buffer(uint8_t *destination, size_t destination_capacity,
                          const struct wsc_frame *frame) {
+  if (frame == nullptr) {
+    wsc_trap();
+  }
+  if (frame->payload_length > 0 && frame->payload == nullptr) {
+    wsc_trap();
+  }
+  if (frame->opcode > WSC_OPCODE_MASK) {
+    wsc_trap();
+  }
+  if (frame->payload_length > (size_t)(WSC_LENGTH64_MSB - 1)) {
+    wsc_trap();
+  }
   size_t total = encoded_frame_length(frame);
   if (destination == nullptr) {
     wsc_trap();
