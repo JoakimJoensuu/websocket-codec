@@ -348,7 +348,12 @@ static void require_frame(const struct wsc_frame *frame) {
   }
 }
 
-static size_t encoded_length(const struct wsc_frame *frame) {
+#ifdef WSC_HOSTED
+static size_t
+#elifndef WSC_HOSTED
+size_t
+#endif
+wsc_encoded_frame_length(const struct wsc_frame *frame) {
   require_frame(frame);
   size_t header_length = encoded_header_length(frame->payload_length, frame->masked);
   if (frame->payload_length > ((size_t)-1) - header_length) {
@@ -393,15 +398,9 @@ static size_t write_frame(uint8_t *destination, const struct wsc_frame *frame) {
   return header_length + frame->payload_length;
 }
 
-#ifndef WSC_HOSTED
-size_t wsc_encoded_frame_length(const struct wsc_frame *frame) {
-  return encoded_length(frame);
-}
-#endif
-
 static size_t wsc_encode_buffer(uint8_t *destination, size_t destination_capacity,
                                 const struct wsc_frame *frame) {
-  size_t total = encoded_length(frame);
+  size_t total = wsc_encoded_frame_length(frame);
   if (destination == nullptr) {
     wsc_trap();
   }
@@ -414,7 +413,7 @@ static size_t wsc_encode_buffer(uint8_t *destination, size_t destination_capacit
 #ifdef WSC_HOSTED
 struct wsc_encoding_result wsc_encode(const struct wsc_frame *frame) {
   struct wsc_encoding_result result = {.status = WSC_OK};
-  size_t total = encoded_length(frame);
+  size_t total = wsc_encoded_frame_length(frame);
 
   result.data_length = total;
   result.data = malloc(total);
