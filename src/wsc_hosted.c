@@ -369,7 +369,7 @@ struct wsc_decoder *wsc_decoder_create() {
 
 struct wsc_encoding_result wsc_encode(const struct wsc_frame *frame) {
   struct wsc_encoding_result result = {.status = WSC_OK};
-  size_t total = wsc_encoded_frame_length(frame);
+  size_t total = encoded_frame_length(frame);
 
   result.data_length = total;
   result.data = malloc(total);

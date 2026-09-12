@@ -382,6 +382,10 @@ struct wsc_decoder *wsc_decoder_create(unsigned char *arena, size_t capacity) {
   return (struct wsc_decoder *)slot;
 }
 
+size_t wsc_encoded_frame_length(const struct wsc_frame *frame) {
+  return encoded_frame_length(frame);
+}
+
 size_t wsc_encode(uint8_t *destination, size_t destination_capacity,
                   const struct wsc_frame *frame) {
   return wsc_encode_buffer(destination, destination_capacity, frame);

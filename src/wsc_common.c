@@ -78,7 +78,7 @@ static void require_frame(const struct wsc_frame *frame) {
   }
 }
 
-size_t wsc_encoded_frame_length(const struct wsc_frame *frame) {
+size_t encoded_frame_length(const struct wsc_frame *frame) {
   require_frame(frame);
   size_t header_length = encoded_header_length(frame->payload_length, frame->masked);
   if (frame->payload_length > ((size_t)-1) - header_length) {
@@ -125,7 +125,7 @@ static size_t write_frame(uint8_t *destination, const struct wsc_frame *frame) {
 
 size_t wsc_encode_buffer(uint8_t *destination, size_t destination_capacity,
                          const struct wsc_frame *frame) {
-  size_t total = wsc_encoded_frame_length(frame);
+  size_t total = encoded_frame_length(frame);
   if (destination == nullptr) {
     wsc_trap();
   }

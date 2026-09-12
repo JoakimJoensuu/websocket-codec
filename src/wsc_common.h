@@ -56,9 +56,7 @@ void apply_mask(uint8_t *data, size_t length, const uint8_t key[WSC_MASKING_KEY_
                 unsigned offset);
 size_t header_length(unsigned byte1);
 
-#ifdef WSC_HOSTED
-size_t wsc_encoded_frame_length(const struct wsc_frame *frame);
-#endif
+size_t encoded_frame_length(const struct wsc_frame *frame);
 size_t wsc_encode_buffer(uint8_t *destination, size_t destination_capacity,
                          const struct wsc_frame *frame);
 
