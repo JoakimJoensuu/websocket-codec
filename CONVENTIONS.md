@@ -4,13 +4,16 @@ Do not restate language or protocol standards.
 
 ## Language
 
-ISO C23, hosted. No extensions.
+Library source is ISO C23. No extensions.
 
 Cast only when there is no implicit conversion, and only when that is the
 most readable way.
 
 Parenthesize sizeof operands, even when the grammar allows omitting
 them.
+
+Write range checks in ascending order. Inclusive: min <= value && value <= max.
+Exclusive: min < value && value < max.
 
 ## Writing
 
@@ -27,7 +30,8 @@ Tools and other files refer to it, or say nothing.
 
 ## Errors
 
-Programming errors abort, expected failures still return an error.
+Programming errors call unreachable() in freestanding builds and abort() when
+hosted. Expected failures still return an error.
 
 ## Names
 
@@ -63,8 +67,16 @@ type in the name.
 Do not use a boolean parameter to choose between two operations. Use two
 functions. A flag on one operation is fine.
 
+A function takes only what it uses. Prefer a field over the enclosing
+struct when the rest of the object is unused. Keep the enclosing object
+when the alternative is adjacent convertible parameters or a throwaway
+struct of those fields.
+
 Pure functions that return a boolean are named as predicates. Other pure
 functions are named as nouns.
+
+A single-use function stays only when its name makes the caller clearer than
+inlining the body.
 
 ## Comments
 
@@ -82,8 +94,9 @@ implementation.
 
 ## Commits and PRs
 
-A title must complete "This commit/PR will …" with what the change
-does to the files, not what those files do or say afterwards. Do not
+A title must complete "This commit/PR will …" with the change itself: a
+behaviour change, a fix, or what it adds, removes, or updates. Do not
+restate what the code or docs say or how they work afterwards. Do not
 end it with a period.
 
 A body describes or reasons the change when that is needed. Otherwise
