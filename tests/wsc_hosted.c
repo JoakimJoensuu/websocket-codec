@@ -96,8 +96,8 @@ Ensure(roundtrip_sizes) {
       0, 1, WSC_TEST_LENGTH7_MAX, WSC_TEST_LENGTH7_MAX + 1, UINT16_MAX, (size_t)UINT16_MAX + 1,
   };
   const uint8_t key[] = {1, 2, 3, 4};
-  for (size_t idx = 0; idx < sizeof(sizes) / sizeof(sizes[0]); idx++) {
-    size_t length = sizes[idx];
+  for (size_t index = 0; index < sizeof(sizes) / sizeof(sizes[0]); index++) {
+    size_t length = sizes[index];
     uint8_t *payload = nullptr;
     struct wsc_frame frame;
     if (length > 0) {
@@ -283,7 +283,7 @@ Ensure(non_minimal_length64) {
   wsc_decoder_destroy(decoder);
 }
 
-Ensure(len64_msb) {
+Ensure(length64_msb) {
   uint8_t wire[WSC_TEST_HEADER_BASE + WSC_TEST_LENGTH64_EXT];
   struct wsc_decoder *decoder = wsc_decoder_create();
   struct wsc_decoding_result result;
@@ -352,7 +352,7 @@ int main() {
   add_test(suite, two_frames_one_feed);
   add_test(suite, non_minimal_length16);
   add_test(suite, non_minimal_length64);
-  add_test(suite, len64_msb);
+  add_test(suite, length64_msb);
   add_test(suite, masked_raw_header);
   add_test(suite, frames_survive_next_feed);
   auto reporter = create_text_reporter();
