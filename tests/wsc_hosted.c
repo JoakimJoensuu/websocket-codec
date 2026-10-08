@@ -298,6 +298,28 @@ Ensure(length64_msb) {
   wsc_decoder_destroy(decoder);
 }
 
+#if SIZE_MAX < UINT64_MAX
+Ensure(length_exceeds_size) {
+  uint8_t wire[WSC_TEST_HEADER_BASE + WSC_TEST_LENGTH64_EXT];
+  struct wsc_decoder *decoder = wsc_decoder_create();
+  struct wsc_decoding_result result;
+  memset(wire, 0, sizeof(wire));
+  wire[0] = (uint8_t)(WSC_TEST_FIN_BIT | WSC_OPCODE_BINARY);
+  wire[1] = WSC_TEST_LENGTH64;
+  wsc_test_write_uint64(wire + WSC_TEST_HEADER_BASE, (uint64_t)SIZE_MAX + 1);
+  assert_that(decoder, is_non_null);
+  result = wsc_decoder_feed(decoder, wire, sizeof(wire));
+  assert_that(result.status, is_equal_to(WSC_ERR_LENGTH_EXCEEDS_SIZE));
+  assert_that(result.source_consumed, is_equal_to(sizeof(wire)));
+  wsc_decoding_result_free(result);
+  result = wsc_decoder_feed(decoder, wire, sizeof(wire));
+  assert_that(result.status, is_equal_to(WSC_ERR_LENGTH_EXCEEDS_SIZE));
+  assert_that(result.source_consumed, is_equal_to(0));
+  wsc_decoding_result_free(result);
+  wsc_decoder_destroy(decoder);
+}
+#endif
+
 Ensure(masked_raw_header) {
   const uint8_t key[] = {0x01, 0x02, 0x03, 0x04};
   const uint8_t payload[] = {0x10, 0x20, 0x30, 0x40, 0x50};
@@ -353,6 +375,9 @@ int main() {
   add_test(suite, non_minimal_length16);
   add_test(suite, non_minimal_length64);
   add_test(suite, length64_msb);
+#if SIZE_MAX < UINT64_MAX
+  add_test(suite, length_exceeds_size);
+#endif
   add_test(suite, masked_raw_header);
   add_test(suite, frames_survive_next_feed);
   auto reporter = create_text_reporter();

@@ -6,10 +6,11 @@
 #include <stdint.h>
 
 enum wsc_status {
-  WSC_OK                     = 0,
-  WSC_ERR_NO_MEMORY          = -1,
-  WSC_ERR_LENGTH_NOT_MINIMAL = -2,
-  WSC_ERR_LENGTH64_MSB       = -3,
+  WSC_OK                      = 0,
+  WSC_ERR_NO_MEMORY           = -1,
+  WSC_ERR_LENGTH_NOT_MINIMAL  = -2,
+  WSC_ERR_LENGTH64_MSB        = -3,
+  WSC_ERR_LENGTH_EXCEEDS_SIZE = -4,
 };
 
 enum wsc_opcode : uint8_t {
@@ -76,8 +77,9 @@ void wsc_decoder_destroy(struct wsc_decoder *decoder);
  * @c wsc_decoding_result.source_consumed is how many bytes of @p source were accepted;
  * re-feed the remainder after @c WSC_ERR_NO_MEMORY.
  * @c wsc_decoding_result.status of @c WSC_ERR_NO_MEMORY does not kill the decoder; free
- * held results or retry later. Protocol errors leave the decoder unusable until a
- * new one is created. Frames already in that result are still owned by the caller.
+ * held results or retry later. @c WSC_ERR_LENGTH_EXCEEDS_SIZE and protocol errors leave
+ * the decoder unusable until a new one is created. Frames already in that result are
+ * still owned by the caller.
  */
 struct wsc_decoding_result wsc_decoder_feed(struct wsc_decoder *decoder, const uint8_t *source,
                                             size_t source_length);
@@ -119,8 +121,8 @@ size_t wsc_encode(uint8_t *destination, const struct wsc_frame *frame);
  * @c wsc_decoding_result.status of @c WSC_ERR_NO_MEMORY does not kill the decoder; finish
  * with the result before the next feed, then re-feed the unconsumed suffix. A larger
  * arena needs a new decoder and a replay of the full in-progress frame (bytes already
- * accepted on earlier feeds, then the remainder). Protocol errors leave the decoder
- * unusable until a new one is created.
+ * accepted on earlier feeds, then the remainder). @c WSC_ERR_LENGTH_EXCEEDS_SIZE and
+ * protocol errors leave the decoder unusable until a new one is created.
  */
 struct wsc_decoding_result wsc_decoder_feed(struct wsc_decoder *decoder, const uint8_t *source,
                                             size_t source_length);
