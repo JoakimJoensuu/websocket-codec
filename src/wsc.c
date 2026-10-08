@@ -186,6 +186,9 @@ static enum wsc_status parse_payload_length(const uint8_t *header, uint64_t *pay
 
 static size_t encoded_frame_length(const struct wsc_frame *frame) {
   if (frame == nullptr) trap();
+  if (0 < frame->payload_length && frame->payload == nullptr) trap();
+  if (OPCODE_MASK < frame->opcode) trap();
+  if ((size_t)(LENGTH64_MSB - 1) < frame->payload_length) trap();
 
   size_t header_length = HEADER_BASE_LENGTH;
   if (LENGTH7_MAX < frame->payload_length) {
@@ -202,18 +205,7 @@ static size_t encoded_frame_length(const struct wsc_frame *frame) {
 }
 
 static size_t encode(uint8_t *destination, const struct wsc_frame *frame) {
-  if (frame == nullptr) {
-    trap();
-  }
-  if (0 < frame->payload_length && frame->payload == nullptr) {
-    trap();
-  }
-  if (OPCODE_MASK < frame->opcode) {
-    trap();
-  }
-  if ((size_t)(LENGTH64_MSB - 1) < frame->payload_length) {
-    trap();
-  }
+  size_t total = encoded_frame_length(frame);
   if (destination == nullptr) {
     trap();
   }
@@ -256,7 +248,7 @@ static size_t encode(uint8_t *destination, const struct wsc_frame *frame) {
       apply_mask(destination + header_length, frame->payload_length, frame->masking_key);
     }
   }
-  return header_length + frame->payload_length;
+  return total;
 }
 
 #ifdef WSC_HOSTED

@@ -33,5 +33,5 @@ To fix formatting, rerun the clang-format command below with `-i` in place of
 
 ```sh
 clang-format-23 --dry-run --Werror $(find include src examples tests -type f -name '*.[ch]' | sort)
-clang-tidy-23 --experimental-custom-checks $(jq -r '.[].file' compile_commands.json)
+clang-tidy-23 --experimental-custom-checks $(jq -r '.[].file' compile_commands.json | grep -E '/(src|include|tests|examples)/' | grep -v '/_deps/' | sort -u)
 ```

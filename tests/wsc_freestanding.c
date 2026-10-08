@@ -436,7 +436,7 @@ Ensure(caller_buffer_no_memory) {
 }
 
 Ensure(caller_buffer_resume_after_no_memory) {
-  enum { frame_count = 9 };
+  enum { frame_count = 9, capacity_start = 128, capacity_step = 16 };
   uint8_t payload_bytes[frame_count];
   uint8_t *wire_parts[frame_count];
   size_t wire_lengths[frame_count];
@@ -460,7 +460,8 @@ Ensure(caller_buffer_resume_after_no_memory) {
     free(wire_parts[i]);
   }
 
-  for (size_t capacity = 128; capacity <= WSC_TEST_ARENA_SIZE; capacity += 16) {
+  for (size_t capacity = capacity_start; capacity <= WSC_TEST_ARENA_SIZE;
+       capacity += capacity_step) {
     unsigned char *arena = malloc(capacity);
     struct wsc_decoder *decoder = nullptr;
     struct wsc_decoding_result result;
