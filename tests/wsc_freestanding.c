@@ -435,6 +435,75 @@ Ensure(caller_buffer_no_memory) {
   free(wire);
 }
 
+Ensure(caller_buffer_resume_after_no_memory) {
+  enum { frame_count = 9 };
+  uint8_t payload_bytes[frame_count];
+  uint8_t *wire_parts[frame_count];
+  size_t wire_lengths[frame_count];
+  size_t wire_length = 0;
+  bool recovered = false;
+
+  for (size_t i = 0; i < frame_count; i++) {
+    payload_bytes[i] = (uint8_t)('a' + i);
+    struct wsc_frame frame =
+        wsc_test_make_frame(true, WSC_OPCODE_BINARY, &payload_bytes[i], 1, nullptr);
+    wire_parts[i] = encode_wire(&frame, &wire_lengths[i]);
+    wire_length += wire_lengths[i];
+  }
+
+  uint8_t *wire = malloc(wire_length);
+  assert_that(wire, is_non_null);
+  size_t offset = 0;
+  for (size_t i = 0; i < frame_count; i++) {
+    memcpy(wire + offset, wire_parts[i], wire_lengths[i]);
+    offset += wire_lengths[i];
+    free(wire_parts[i]);
+  }
+
+  for (size_t capacity = 128; capacity <= WSC_TEST_ARENA_SIZE; capacity += 16) {
+    unsigned char *arena = malloc(capacity);
+    struct wsc_decoder *decoder = nullptr;
+    struct wsc_decoding_result result;
+    struct wsc_decoding_result again;
+    bool published = true;
+    assert_that(arena, is_non_null);
+    decoder = wsc_decoder_create(arena, capacity);
+    if (decoder == nullptr) {
+      free(arena);
+      continue;
+    }
+    result = wsc_decoder_feed(decoder, wire, wire_length);
+    if (result.status != WSC_ERR_NO_MEMORY || result.frames_count == 0 ||
+        result.frames_count >= frame_count || result.source_consumed != wire_length) {
+      free(arena);
+      continue;
+    }
+    for (size_t i = 0; i < result.frames_count; i++) {
+      if (result.frames[i].payload == nullptr || result.frames[i].payload_length != 1 ||
+          result.frames[i].payload[0] != payload_bytes[i]) {
+        published = false;
+      }
+    }
+    if (!published) {
+      free(arena);
+      continue;
+    }
+    again = wsc_decoder_feed(decoder, nullptr, 0);
+    if (again.status != WSC_OK || again.frames_count != 1 || again.frames[0].payload == nullptr ||
+        again.frames[0].payload_length != 1 ||
+        again.frames[0].payload[0] != payload_bytes[result.frames_count]) {
+      free(arena);
+      continue;
+    }
+    recovered = true;
+    free(arena);
+    break;
+  }
+
+  assert_that(recovered, is_true);
+  free(wire);
+}
+
 int main() {
   auto suite = create_test_suite();
   add_test(suite, rfc_unmasked_hello);
@@ -457,6 +526,7 @@ int main() {
   add_test(suite, caller_buffer_two_frames);
   add_test(suite, caller_buffer_complete_then_split);
   add_test(suite, caller_buffer_no_memory);
+  add_test(suite, caller_buffer_resume_after_no_memory);
   auto reporter = create_text_reporter();
   int result = run_test_suite(suite, reporter);
   destroy_test_suite(suite);
