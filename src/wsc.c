@@ -130,7 +130,7 @@ static void apply_mask(uint8_t *data, size_t length, const uint8_t key[WSC_MASKI
 }
 
 static void mask(struct wsc_frame *frame, uint8_t *payload) {
-  if (frame->masked && frame->payload_length > 0) {
+  if (frame->masked && 0 < frame->payload_length) {
     apply_mask(payload, frame->payload_length, frame->masking_key);
   }
 }
@@ -205,7 +205,7 @@ static size_t encode(uint8_t *destination, const struct wsc_frame *frame) {
   if (frame == nullptr) {
     trap();
   }
-  if (frame->payload_length > 0 && frame->payload == nullptr) {
+  if (0 < frame->payload_length && frame->payload == nullptr) {
     trap();
   }
   if (OPCODE_MASK < frame->opcode) {
@@ -250,7 +250,7 @@ static size_t encode(uint8_t *destination, const struct wsc_frame *frame) {
   }
 
   memcpy(destination, header, header_length);
-  if (frame->payload_length > 0) {
+  if (0 < frame->payload_length) {
     memcpy(destination + header_length, frame->payload, frame->payload_length);
     if (frame->masked) {
       apply_mask(destination + header_length, frame->payload_length, frame->masking_key);
@@ -345,7 +345,7 @@ static bool reserve_frames(struct wsc_decoder *decoder, size_t capacity) {
   if (new_buffer == nullptr) {
     return false;
   }
-  if (decoder->frames != nullptr && decoder->frames_count > 0) {
+  if (decoder->frames != nullptr && 0 < decoder->frames_count) {
     memcpy(new_buffer, decoder->frames, decoder->frames_count * sizeof(*new_buffer));
   }
   decoder->frames = new_buffer;
@@ -567,7 +567,7 @@ struct wsc_decoding_result wsc_decoder_feed(struct wsc_decoder *decoder, const u
   if (decoder == nullptr) {
     trap();
   }
-  if (source_length > 0 && source == nullptr) {
+  if (0 < source_length && source == nullptr) {
     trap();
   }
 

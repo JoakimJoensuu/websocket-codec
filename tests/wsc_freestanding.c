@@ -98,7 +98,7 @@ Ensure(roundtrip_sizes) {
     size_t length = sizes[index];
     uint8_t *payload = nullptr;
     struct wsc_frame frame;
-    if (length > 0) {
+    if (0 < length) {
       payload = malloc(length);
       assert_that(payload, is_non_null);
       for (size_t i = 0; i < length; i++) {

@@ -82,7 +82,7 @@ static inline size_t wsc_test_craft(uint8_t *destination, size_t destination_cap
     memcpy(destination + (header_length - WSC_MASKING_KEY_LENGTH), masking_key,
            WSC_MASKING_KEY_LENGTH);
   }
-  if (payload_length > 0) {
+  if (0 < payload_length) {
     memcpy(destination + header_length, payload, payload_length);
     if (masking_key != nullptr) {
       wsc_test_xor_mask(destination + header_length, payload_length, masking_key);
@@ -100,7 +100,7 @@ static inline void wsc_test_assert_frame(const struct wsc_frame *actual,
   assert_that(actual->opcode, is_equal_to(expected->opcode));
   assert_that(actual->masked, is_equal_to(expected->masked));
   assert_that(actual->payload_length, is_equal_to(expected->payload_length));
-  if (expected->payload_length > 0) {
+  if (0 < expected->payload_length) {
     assert_that(actual->payload, is_non_null);
     assert_that(memcmp(actual->payload, expected->payload, expected->payload_length),
                 is_equal_to(0));
