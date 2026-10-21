@@ -32,19 +32,11 @@ endif()
 
 option(WSC_HOSTED "Heap-backed decoder and wsc_encode" ON)
 
+add_library(wsc src/wsc.c)
 if(WSC_HOSTED)
-  add_library(wsc src/wsc.c)
   target_compile_definitions(wsc PUBLIC WSC_HOSTED=1)
 else()
-  include(FetchContent)
-  FetchContent_Declare(
-    ringalloc
-    GIT_REPOSITORY https://github.com/JoakimJoensuu/ringalloc.git
-    GIT_TAG 43098d590c0670ea0ca67eb7634abab4047485f1)
-  FetchContent_MakeAvailable(ringalloc)
-  add_library(wsc src/wsc.c)
   target_compile_options(wsc PRIVATE -ffreestanding)
-  target_link_libraries(wsc PUBLIC ringalloc)
 endif()
 
 target_include_directories(wsc PUBLIC include)

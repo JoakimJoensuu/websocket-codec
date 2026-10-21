@@ -102,7 +102,7 @@ static inline void wsc_test_assert_frame(const struct wsc_frame *actual,
   assert_that(actual->payload_length, is_equal_to(expected->payload_length));
   if (0 < expected->payload_length) {
     assert_that(actual->payload, is_non_null);
-    assert_that(memcmp(actual->payload, expected->payload, expected->payload_length),
+    assert_that(memcmp(actual->payload, expected->payload, (size_t)expected->payload_length),
                 is_equal_to(0));
   } else {
     assert_that(actual->payload, is_null);
