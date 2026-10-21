@@ -35,7 +35,7 @@ static inline void wsc_test_write_uint16(uint8_t *destination, uint16_t value) {
 }
 
 static inline void wsc_test_write_uint64(uint8_t *destination, uint64_t value) {
-  for (int i = (int)sizeof(uint64_t) - 1; i >= 0; i--) {
+  for (int i = (int)sizeof(uint64_t) - 1; 0 <= i; i--) {
     destination[i] = (uint8_t)value;
     value >>= WSC_TEST_BYTE_BITS;
   }

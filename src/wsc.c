@@ -167,7 +167,7 @@ static size_t encode_header(uint8_t header[HEADER_MAX_LENGTH], const struct wsc_
     header[1] = LENGTH64_CODE;
     {
       uint64_t value = frame->payload_length;
-      for (int i = (int)sizeof(uint64_t) - 1; i >= 0; i--) {
+      for (int i = (int)sizeof(uint64_t) - 1; 0 <= i; i--) {
         header[HEADER_BASE_LENGTH + (size_t)i] = (uint8_t)(value % BYTE_BASE);
         value /= BYTE_BASE;
       }
