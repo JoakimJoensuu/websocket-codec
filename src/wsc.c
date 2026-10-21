@@ -204,7 +204,7 @@ static size_t encode(uint8_t *destination, const struct wsc_frame *frame) {
     }
   }
 
-  return length;
+  return (size_t)length;
 }
 
 struct progress {
