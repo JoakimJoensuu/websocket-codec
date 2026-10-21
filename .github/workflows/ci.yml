@@ -47,15 +47,20 @@ jobs:
           path: ${{ runner.temp }}/clang
           key: clang-23.1.0-${{ runner.os }}-tidy-format-v3
       - run: |
+          cmake -B build-hosted
+          cmake -B build-freestanding -DWSC_HOSTED=OFF
+      - run: |
           export PATH="${{ runner.temp }}/clang/bin:$PATH"
           export LD_LIBRARY_PATH="${{ runner.temp }}/clang/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
           clang-format --version
           clang-tidy --version
           sources=$(find include src examples tests -type f -name '*.[ch]' 2>/dev/null | sort)
-          units=
-          if [ -f compile_commands.json ]; then
-            units=$(jq -r '.[].file' compile_commands.json)
-          fi
+          units=$(
+            {
+              jq -r '.[].file' build-hosted/compile_commands.json
+              jq -r '.[].file' build-freestanding/compile_commands.json
+            } | grep -E '/(src|include|tests|examples)/' | grep -v '/_deps/' | sort -u
+          )
           set +e
           if [ -n "$sources" ]; then
             clang-format --dry-run --Werror $sources | tee "$RUNNER_TEMP/format.log"
@@ -65,8 +70,18 @@ jobs:
             : > "$RUNNER_TEMP/format.log"
           fi
           if [ -n "$units" ]; then
-            clang-tidy --experimental-custom-checks $units | tee "$RUNNER_TEMP/tidy.log"
-            tidy=${PIPESTATUS[0]}
+            clang-tidy --experimental-custom-checks -p build-hosted \
+              $(jq -r '.[].file' build-hosted/compile_commands.json | grep -E 'websocket-codec/(src|include|tests|examples)/' | sort -u) \
+              | tee "$RUNNER_TEMP/tidy-hosted.log"
+            tidy_hosted=${PIPESTATUS[0]}
+            clang-tidy --experimental-custom-checks -p build-freestanding \
+              $(jq -r '.[].file' build-freestanding/compile_commands.json | grep -E 'websocket-codec/(src|include|tests|examples)/' | sort -u) \
+              | tee "$RUNNER_TEMP/tidy-freestanding.log"
+            tidy_freestanding=${PIPESTATUS[0]}
+            tidy=0
+            test "$tidy_hosted" -eq 0 || tidy=1
+            test "$tidy_freestanding" -eq 0 || tidy=1
+            cat "$RUNNER_TEMP/tidy-hosted.log" "$RUNNER_TEMP/tidy-freestanding.log" >"$RUNNER_TEMP/tidy.log"
           else
             tidy=0
             : > "$RUNNER_TEMP/tidy.log"
@@ -80,3 +95,14 @@ jobs:
             if [ ! -s "$RUNNER_TEMP/tidy.log" ]; then echo ok; else echo '```'; cat "$RUNNER_TEMP/tidy.log"; echo '```'; fi
           } >>"$GITHUB_STEP_SUMMARY"
           test "$fmt" -eq 0 && test "$tidy" -eq 0
+
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        hosted: [ON, OFF]
+    steps:
+      - uses: actions/checkout@v5
+      - run: cmake -B build -DWSC_HOSTED=${{ matrix.hosted }}
+      - run: cmake --build build
+      - run: ctest --test-dir build --output-on-failure
