@@ -6,11 +6,11 @@
 #include <stdint.h>
 
 enum wsc_status {
-  WSC_INCOMPLETE             = 1,
-  WSC_OK                     = 0,
-  WSC_ERR_NO_MEMORY          = -1,
-  WSC_ERR_LENGTH_NOT_MINIMAL = -2,
-  WSC_ERR_LENGTH64_MSB       = -3,
+  WSC_INCOMPLETE                      = 1,
+  WSC_OK                              = 0,
+  WSC_ERR_NO_MEMORY                   = -1,
+  WSC_ERR_PROTOCOL_LENGTH_NOT_MINIMAL = -2,
+  WSC_ERR_PROTOCOL_LENGTH64_MSB       = -3,
 #ifndef WSC_HOSTED
   WSC_ERR_PAYLOAD_EXCEEDS_CAPACITY = -4,
 #endif
