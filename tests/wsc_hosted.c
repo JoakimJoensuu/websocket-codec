@@ -259,11 +259,11 @@ Ensure(non_minimal_length16) {
   struct wsc_decoding_result result;
   assert_that(decoder, is_non_null);
   result = wsc_decoder_feed(decoder, wire, wire_length);
-  assert_that(result.status, is_equal_to(WSC_ERR_LENGTH_NOT_MINIMAL));
+  assert_that(result.status, is_equal_to(WSC_ERR_PROTOCOL_LENGTH_NOT_MINIMAL));
   assert_that(result.frames_count, is_equal_to(0));
   wsc_decoding_result_free(result);
   result = wsc_decoder_feed(decoder, wire, wire_length);
-  assert_that(result.status, is_equal_to(WSC_ERR_LENGTH_NOT_MINIMAL));
+  assert_that(result.status, is_equal_to(WSC_ERR_PROTOCOL_LENGTH_NOT_MINIMAL));
   assert_that(result.source_consumed, is_equal_to(0));
   wsc_decoding_result_free(result);
   wsc_decoder_destroy(decoder);
@@ -278,7 +278,7 @@ Ensure(non_minimal_length64) {
   struct wsc_decoding_result result;
   assert_that(decoder, is_non_null);
   result = wsc_decoder_feed(decoder, wire, wire_length);
-  assert_that(result.status, is_equal_to(WSC_ERR_LENGTH_NOT_MINIMAL));
+  assert_that(result.status, is_equal_to(WSC_ERR_PROTOCOL_LENGTH_NOT_MINIMAL));
   wsc_decoding_result_free(result);
   wsc_decoder_destroy(decoder);
 }
@@ -293,7 +293,7 @@ Ensure(length64_msb) {
   wire[2] = WSC_TEST_LENGTH64_MSB_BYTE;
   assert_that(decoder, is_non_null);
   result = wsc_decoder_feed(decoder, wire, sizeof(wire));
-  assert_that(result.status, is_equal_to(WSC_ERR_LENGTH64_MSB));
+  assert_that(result.status, is_equal_to(WSC_ERR_PROTOCOL_LENGTH64_MSB));
   wsc_decoding_result_free(result);
   wsc_decoder_destroy(decoder);
 }

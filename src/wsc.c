@@ -108,16 +108,16 @@ static enum wsc_status parse_payload_length(const uint8_t *header, uint64_t *pay
     const uint8_t *extended_length_field = header + HEADER_BASE_LENGTH;
     *payload_length = extended_payload_length16(extended_length_field);
     if (*payload_length <= LENGTH7_MAX) {
-      return WSC_ERR_LENGTH_NOT_MINIMAL;
+      return WSC_ERR_PROTOCOL_LENGTH_NOT_MINIMAL;
     }
   } else if (length_field == LENGTH64_CODE) {
     const uint8_t *extended_length_field = header + HEADER_BASE_LENGTH;
     *payload_length = extended_payload_length64(extended_length_field);
     if ((*payload_length & LENGTH64_MSB) != 0) {
-      return WSC_ERR_LENGTH64_MSB;
+      return WSC_ERR_PROTOCOL_LENGTH64_MSB;
     }
     if (*payload_length <= UINT16_MAX) {
-      return WSC_ERR_LENGTH_NOT_MINIMAL;
+      return WSC_ERR_PROTOCOL_LENGTH_NOT_MINIMAL;
     }
   } else {
     *payload_length = length_field;
